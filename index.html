@@ -1,150 +1,331 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-TW">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ATLAS WMS 倉儲管理系統 - 雲端版</title>
     <style>
-        :root { --primary-color: #2c3e50; --secondary-color: #e74c3c; --bg-color: #f4f7f6; --sidebar-width: 250px; }
-        body { margin: 0; font-family: 'Segoe UI', Tahoma, sans-serif; background-color: var(--bg-color); display: flex; height: 100vh; overflow: hidden; }
-        .sidebar { width: var(--sidebar-width); background-color: var(--primary-color); color: white; display: flex; flex-direction: column; }
-        .sidebar h2 { text-align: center; padding: 20px 0; margin: 0; background-color: #1a252f; color: var(--secondary-color); font-weight: 900; letter-spacing: 2px; }
-        .menu-item { padding: 15px 20px; cursor: pointer; border-bottom: 1px solid #34495e; transition: 0.3s; }
-        .menu-item:hover, .menu-item.active { background-color: var(--secondary-color); }
-        .main-content { flex: 1; display: flex; flex-direction: column; }
-        .topbar { background: #fff; padding: 15px 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
-        .role-selector select { padding: 8px; font-size: 16px; border-radius: 4px; border: 1px solid #ccc; }
-        .workspace { padding: 30px; overflow-y: auto; flex: 1; }
-        .scan-panel { background: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; border-left: 5px solid var(--secondary-color); }
-        .scan-input { width: 100%; padding: 15px; font-size: 24px; border: 2px solid #bdc3c7; border-radius: 6px; box-sizing: border-box; margin-top: 10px; }
-        .scan-input:focus { outline: none; border-color: var(--secondary-color); }
-        .info-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px; }
-        .card { background: #ecf0f1; padding: 15px; border-radius: 6px; text-align: center; }
-        .card-title { font-size: 12px; color: #7f8c8d; text-transform: uppercase; font-weight: bold; }
-        .card-value { font-size: 18px; color: var(--primary-color); margin-top: 5px; font-weight: bold; }
-        table { width: 100%; background: #fff; border-collapse: collapse; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-radius: 8px; overflow: hidden; }
-        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #eee; }
-        th { background-color: #f8f9fa; color: #333; }
-        .status-badge { padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; }
-        .bg-green { background: #d4edda; color: #155724; }
+      :root {
+        --primary-color: #2c3e50;
+        --secondary-color: #e74c3c;
+        --bg-color: #f4f7f6;
+        --sidebar-width: 250px;
+      }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", Tahoma, sans-serif;
+        background-color: var(--bg-color);
+        display: flex;
+        height: 100vh;
+        overflow: hidden;
+      }
+      .sidebar {
+        width: var(--sidebar-width);
+        background-color: var(--primary-color);
+        color: white;
+        display: flex;
+        flex-direction: column;
+      }
+      .sidebar h2 {
+        text-align: center;
+        padding: 20px 0;
+        margin: 0;
+        background-color: #1a252f;
+        color: var(--secondary-color);
+        font-weight: 900;
+        letter-spacing: 2px;
+      }
+      .menu-item {
+        padding: 15px 20px;
+        cursor: pointer;
+        border-bottom: 1px solid #34495e;
+        transition: 0.3s;
+      }
+      .menu-item:hover,
+      .menu-item.active {
+        background-color: var(--secondary-color);
+      }
+      .main-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+      .topbar {
+        background: #fff;
+        padding: 15px 30px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .role-selector select {
+        padding: 8px;
+        font-size: 16px;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+      }
+      .workspace {
+        padding: 30px;
+        overflow-y: auto;
+        flex: 1;
+      }
+      .scan-panel {
+        background: #fff;
+        padding: 25px;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        margin-bottom: 20px;
+        border-left: 5px solid var(--secondary-color);
+      }
+      .scan-input {
+        width: 100%;
+        padding: 15px;
+        font-size: 24px;
+        border: 2px solid #bdc3c7;
+        border-radius: 6px;
+        box-sizing: border-box;
+        margin-top: 10px;
+      }
+      .scan-input:focus {
+        outline: none;
+        border-color: var(--secondary-color);
+      }
+      .info-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-top: 20px;
+      }
+      .card {
+        background: #ecf0f1;
+        padding: 15px;
+        border-radius: 6px;
+        text-align: center;
+      }
+      .card-title {
+        font-size: 12px;
+        color: #7f8c8d;
+        text-transform: uppercase;
+        font-weight: bold;
+      }
+      .card-value {
+        font-size: 18px;
+        color: var(--primary-color);
+        margin-top: 5px;
+        font-weight: bold;
+      }
+      table {
+        width: 100%;
+        background: #fff;
+        border-collapse: collapse;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      th,
+      td {
+        padding: 12px 15px;
+        text-align: left;
+        border-bottom: 1px solid #eee;
+      }
+      th {
+        background-color: #f8f9fa;
+        color: #333;
+      }
+      .status-badge {
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: bold;
+      }
+      .bg-green {
+        background: #d4edda;
+        color: #155724;
+      }
+      .bg-red {
+        background: #f8d7da;
+        color: #721c24;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="sidebar">
-        <h2>ATLAS WMS</h2>
-        <div class="menu-item active">📥 Inbound (收貨 / 入庫)</div>
-        <div class="menu-item">📤 Outbound (揀貨 / 出貨)</div>
-        <div class="menu-item">🏢 Inventory (庫存 / 儲位)</div>
-        <div class="menu-item">🔍 Quality (品質檢驗)</div>
+      <h2>ATLAS WMS</h2>
+      <div class="menu-item active">📥 Inbound (收貨 / 入庫)</div>
+      <div class="menu-item">📤 Outbound (揀貨 / 出貨)</div>
+      <div class="menu-item">🏢 Inventory (庫存 / 儲位)</div>
+      <div class="menu-item">🔍 Quality (品質檢驗)</div>
     </div>
 
     <div class="main-content">
-        <div class="topbar">
-            <h3 style="margin:0; color: #2c3e50;">📥 Inbound: Receiving (收貨作業)</h3>
-            <div class="role-selector">
-                <label>模擬登入權限：</label>
-                <select id="roleSelect">
-                    <option value="warehouse">倉管人員 (Warehouse)</option>
-                    <option value="qa">品保人員 (QA)</option>
-                </select>
+      <div class="topbar">
+        <h3 style="margin: 0; color: #2c3e50">
+          📥 Inbound: Receiving (收貨作業)
+        </h3>
+        <div class="role-selector">
+          <label>模擬登入權限：</label>
+          <select id="roleSelect">
+            <option value="warehouse">倉管人員 (Warehouse)</option>
+            <option value="qa">品保人員 (QA)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="workspace">
+        <div class="scan-panel" id="scanner-area">
+          <label style="font-weight: bold; color: #333"
+            >條碼掃描區 (請確保使用英文輸入法)</label
+          >
+          <input
+            type="text"
+            id="barcodeInput"
+            class="scan-input"
+            placeholder="等待連線至資料庫..."
+            disabled
+            autocomplete="off" />
+
+          <div class="info-cards">
+            <div class="card">
+              <div class="card-title">What Item? (料號)</div>
+              <div class="card-value" id="val-item">--</div>
             </div>
+            <div class="card">
+              <div class="card-title">How Many? (數量)</div>
+              <div class="card-value" id="val-qty">--</div>
+            </div>
+            <div class="card">
+              <div class="card-title">Which Lot? (批號)</div>
+              <div class="card-value" id="val-lot">--</div>
+            </div>
+            <div class="card">
+              <div class="card-title">Where is it? (位置)</div>
+              <div class="card-value" id="val-bin">--</div>
+            </div>
+          </div>
         </div>
 
-        <div class="workspace">
-            <div class="scan-panel" id="scanner-area">
-                <label style="font-weight: bold; color: #333;">條碼掃描區 (請確保使用英文輸入法)</label>
-                <input type="text" id="barcodeInput" class="scan-input" placeholder="等待連線至資料庫..." disabled autocomplete="off">
-                
-                <div class="info-cards">
-                    <div class="card"><div class="card-title">What Item? (料號)</div><div class="card-value" id="val-item">--</div></div>
-                    <div class="card"><div class="card-title">How Many? (數量)</div><div class="card-value" id="val-qty">--</div></div>
-                    <div class="card"><div class="card-title">Which Lot? (批號)</div><div class="card-value" id="val-lot">--</div></div>
-                    <div class="card"><div class="card-title">Where is it? (位置)</div><div class="card-value" id="val-bin">--</div></div>
-                </div>
-            </div>
-
-            <h4 style="color: #7f8c8d;">雲端作業紀錄 (即時寫入 Firestore)</h4>
-            <table>
-                <thead><tr><th>時間</th><th>動作</th><th>掃描內容</th><th>狀態</th></tr></thead>
-                <tbody id="transaction-log"></tbody>
-            </table>
-        </div>
+        <h4 style="color: #7f8c8d">雲端作業紀錄 (即時寫入 Firestore)</h4>
+        <table>
+          <thead>
+            <tr>
+              <th>時間</th>
+              <th>動作</th>
+              <th>掃描內容</th>
+              <th>狀態</th>
+            </tr>
+          </thead>
+          <tbody id="transaction-log"></tbody>
+        </table>
+      </div>
     </div>
 
-    <!-- 載入 Firebase 模組化 SDK -->
+    <!-- 載入 Firebase 模組化 SDK (包含 doc 與 getDoc 用於查詢) -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+      import {
+        getFirestore,
+        collection,
+        addDoc,
+        serverTimestamp,
+        doc,
+        getDoc,
+      } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // 貼上你專屬的 Firebase 金鑰
-        const firebaseConfig = {
-            apiKey: "AIzaSyDsHhR_etZaAXVQpyzMDm1IVN7j1ZMWyH0",
-            authDomain: "atlas-wms.firebaseapp.com",
-            projectId: "atlas-wms",
-            storageBucket: "atlas-wms.firebasestorage.app",
-            messagingSenderId: "686564888137",
-            appId: "1:686564888137:web:ace7d02ccab06137c2b998"
-        };
+      // 你的專屬 Firebase 金鑰
+      const firebaseConfig = {
+        apiKey: "AIzaSyDsHhR_etZaAXVQpyzMDm1IVN7j1ZMWyH0",
+        authDomain: "atlas-wms.firebaseapp.com",
+        projectId: "atlas-wms",
+        storageBucket: "atlas-wms.firebasestorage.app",
+        messagingSenderId: "686564888137",
+        appId: "1:686564888137:web:ace7d02ccab06137c2b998",
+      };
 
-        // 初始化 Firebase 與 Firestore
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+      const app = initializeApp(firebaseConfig);
+      const db = getFirestore(app);
 
-        // 解除輸入框鎖定，準備掃描
-        const input = document.getElementById('barcodeInput');
-        const logTable = document.getElementById('transaction-log');
-        input.disabled = false;
-        input.placeholder = "請掃描 Item, PO, SO, Lot 或 Bin 條碼...";
-        input.focus();
+      const input = document.getElementById("barcodeInput");
+      const logTable = document.getElementById("transaction-log");
+      input.disabled = false;
+      input.placeholder = "請掃描 Item, PO, SO, Lot 或 Bin 條碼...";
+      input.focus();
 
-        input.addEventListener('keypress', async function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                const barcode = e.target.value.trim();
-                
-                if (barcode !== "") {
-                    // 更新畫面的口訣卡片
-                    document.getElementById('val-item').innerText = barcode;
-                    document.getElementById('val-qty').innerText = "1 EA";
-                    document.getElementById('val-lot').innerText = "自動產生";
-                    document.getElementById('val-bin').innerText = "Receiving Area";
+      input.addEventListener("keypress", async function (e) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          const barcode = e.target.value.trim();
 
-                    try {
-                        // 1. 將掃描紀錄寫入 Firestore 雲端資料庫的 "ScanLogs" 集合中
-                        const docRef = await addDoc(collection(db, "ScanLogs"), {
-                            scanned_code: barcode,
-                            action: "Receiving",
-                            timestamp: serverTimestamp(),
-                            operator: "Warehouse_User"
-                        });
+          if (barcode !== "") {
+            try {
+              // 1. 去 Items 集合查詢該條碼對應的商品主檔
+              const itemRef = doc(db, "Items", barcode);
+              const itemSnap = await getDoc(itemRef);
 
-                        // 2. 寫入成功後，在畫面上新增一筆紀錄
-                        const now = new Date();
-                        const timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
-                        const tr = document.createElement('tr');
-                        tr.innerHTML = `
-                            <td>${timeStr}</td>
-                            <td><strong>Receiving</strong></td>
-                            <td>${barcode}</td>
-                            <td><span class="status-badge bg-green">寫入成功</span></td>
-                        `;
-                        logTable.insertBefore(tr, logTable.firstChild);
+              const now = new Date();
+              const timeStr =
+                now.getHours().toString().padStart(2, "0") +
+                ":" +
+                now.getMinutes().toString().padStart(2, "0");
+              const tr = document.createElement("tr");
 
-                    } catch (error) {
-                        console.error("寫入資料庫失敗: ", error);
-                        alert("資料庫連線失敗，請檢查網路或 Firebase 安全性規則。");
-                    }
-                }
-                e.target.value = '';
+              if (itemSnap.exists()) {
+                // 條碼有建檔：抓出規格資料並更新畫面
+                const itemData = itemSnap.data();
+
+                document.getElementById("val-item").innerText =
+                  itemData.description || barcode;
+                document.getElementById("val-qty").innerText =
+                  (itemData.carton_qty || "--") + " EA / CTN";
+                document.getElementById("val-lot").innerText = "待確認";
+                document.getElementById("val-bin").innerText =
+                  itemData.default_bin || "--";
+
+                // 寫入 ScanLogs
+                await addDoc(collection(db, "ScanLogs"), {
+                  scanned_code: barcode,
+                  description: itemData.description || "",
+                  action: "Receiving",
+                  timestamp: serverTimestamp(),
+                  operator: "Warehouse_User",
+                });
+
+                tr.innerHTML = `
+                                <td>${timeStr}</td>
+                                <td><strong>Receiving</strong></td>
+                                <td>${barcode} <br><small style="color:#7f8c8d;">${itemData.description}</small></td>
+                                <td><span class="status-badge bg-green">辨識成功</span></td>
+                            `;
+              } else {
+                // 條碼未建檔
+                document.getElementById("val-item").innerText = "未建檔商品";
+                document.getElementById("val-qty").innerText = "--";
+                document.getElementById("val-lot").innerText = "--";
+                document.getElementById("val-bin").innerText = "--";
+
+                tr.innerHTML = `
+                                <td>${timeStr}</td>
+                                <td><strong>Receiving</strong></td>
+                                <td><span style="color:#e74c3c; font-weight:bold;">${barcode}</span></td>
+                                <td><span class="status-badge bg-red">查無此料號</span></td>
+                            `;
+              }
+
+              logTable.insertBefore(tr, logTable.firstChild);
+            } catch (error) {
+              console.error("資料庫查詢失敗: ", error);
+              alert("資料庫連線失敗，請檢查網路或 Firebase 安全性規則。");
             }
-        });
+          }
+          e.target.value = "";
+        }
+      });
 
-        // 點擊空白處自動對焦
-        document.addEventListener('click', function(e) {
-            if (e.target.tagName !== 'SELECT' && !input.disabled) {
-                input.focus();
-            }
-        });
+      // 點擊空白處自動對焦輸入框
+      document.addEventListener("click", function (e) {
+        if (e.target.tagName !== "SELECT" && !input.disabled) {
+          input.focus();
+        }
+      });
     </script>
-</body>
+  </body>
 </html>
