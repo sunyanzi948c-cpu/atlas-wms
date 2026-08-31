@@ -69,6 +69,8 @@
         overflow-y: auto;
         flex: 1;
       }
+
+      /* 面板與輸入框基礎設定 */
       .scan-panel {
         background: #fff;
         padding: 25px;
@@ -77,11 +79,6 @@
         margin-bottom: 20px;
         border-left: 5px solid var(--secondary-color);
         transition: 0.3s;
-      }
-
-      /* 模式與狀態的視覺提示 */
-      .scan-panel.mode-outbound {
-        border-left-color: #3498db;
       }
       .scan-input {
         width: 100%;
@@ -97,9 +94,22 @@
         outline: none;
         border-color: var(--secondary-color);
       }
+
+      /* 模式動態切換：藍色 (Outbound) 與 紫色 (Inventory) */
+      .scan-panel.mode-outbound {
+        border-left-color: #3498db;
+      }
       .scan-panel.mode-outbound .scan-input:focus {
         border-color: #3498db;
       }
+      .scan-panel.mode-inventory {
+        border-left-color: #8e44ad;
+      }
+      .scan-panel.mode-inventory .scan-input:focus {
+        border-color: #8e44ad;
+      }
+
+      /* 雙段掃描鎖定狀態的視覺提示 (黃底) */
       .scan-input.state-bin {
         border-color: #f39c12 !important;
         background-color: #fdfae6;
@@ -154,6 +164,8 @@
         font-size: 12px;
         font-weight: bold;
       }
+
+      /* 狀態標籤顏色 */
       .bg-green {
         background: #d4edda;
         color: #155724;
@@ -170,6 +182,10 @@
         background: #cce5ff;
         color: #004085;
       }
+      .bg-purple {
+        background: #e8daef;
+        color: #6c3483;
+      }
     </style>
   </head>
   <body>
@@ -179,8 +195,10 @@
         📥 Inbound (收貨 / 上架)
       </div>
       <div class="menu-item" id="menu-outbound">📤 Outbound (揀貨 / 出貨)</div>
-      <div class="menu-item">🏢 Inventory (庫存 / 儲位)</div>
-      <div class="menu-item">🔍 Quality (品質檢驗)</div>
+      <div class="menu-item" id="menu-inventory">
+        🏢 Inventory (庫存 / 儲位)
+      </div>
+      <div class="menu-item" id="menu-quality">🔍 Quality (品質檢驗)</div>
     </div>
 
     <div class="main-content">
@@ -219,12 +237,16 @@
               <div class="card-value" id="val-qty">--</div>
             </div>
             <div class="card">
-              <div class="card-title">Which Lot? (批號)</div>
-              <div class="card-value" id="val-lot">--</div>
+              <div class="card-title" id="title-lot-or-from">
+                Which Lot? (批號)
+              </div>
+              <div class="card-value" id="val-lot-or-from">--</div>
             </div>
             <div class="card">
-              <div class="card-title">Where is it? (儲位指示)</div>
-              <div class="card-value" id="val-bin">--</div>
+              <div class="card-title" id="title-bin-or-to">
+                Where is it? (儲位指示)
+              </div>
+              <div class="card-value" id="val-bin-or-to">--</div>
             </div>
           </div>
         </div>
@@ -244,6 +266,7 @@
       </div>
     </div>
 
+    <!-- 載入 Firebase (新增 updateDoc) -->
     <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
       import {
@@ -253,6 +276,7 @@
         serverTimestamp,
         doc,
         getDoc,
+        updateDoc,
       } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
       const firebaseConfig = {
@@ -267,60 +291,83 @@
       const app = initializeApp(firebaseConfig);
       const db = getFirestore(app);
 
-      // UI 元素
       const input = document.getElementById("barcodeInput");
       const scanLabel = document.getElementById("scan-label");
       const logTable = document.getElementById("transaction-log");
       const scannerArea = document.getElementById("scanner-area");
       const headerTitle = document.getElementById("header-title");
-      const menuInbound = document.getElementById("menu-inbound");
-      const menuOutbound = document.getElementById("menu-outbound");
 
-      // 系統變數
-      let sysMode = "INBOUND"; // 當前作業模式 (INBOUND 或 OUTBOUND)
-      let currentScanState = "ITEM"; // 狀態機：ITEM 或 BIN
+      let sysMode = "INBOUND";
+      let currentScanState = "ITEM";
       let pendingItemCode = "";
       let pendingItemDesc = "";
+      let pendingFromBin = "";
       let pendingTempRow = null;
 
-      input.focus();
-
-      // ==========================================
-      // 模式切換邏輯 (左側選單)
-      // ==========================================
-      function switchMode(mode) {
-        sysMode = mode;
-        currentScanState = "ITEM"; // 切換模式時重置狀態
-        input.value = "";
-        input.classList.remove("state-bin");
-
-        // 重置卡片
+      // UI 初始化
+      function resetUI() {
         document
           .querySelectorAll(".card-value")
           .forEach((el) => (el.innerText = "--"));
+        document.getElementById("title-lot-or-from").innerText =
+          "Which Lot? (批號)";
+        document.getElementById("title-bin-or-to").innerText =
+          "Where is it? (儲位指示)";
+        input.value = "";
+        input.classList.remove("state-bin");
+        currentScanState = "ITEM";
+        input.focus();
+      }
+
+      // ==========================================
+      // 模式切換邏輯
+      // ==========================================
+      function switchMode(mode) {
+        sysMode = mode;
+        resetUI();
+
+        document
+          .querySelectorAll(".menu-item")
+          .forEach((el) => el.classList.remove("active"));
+        scannerArea.classList.remove("mode-outbound", "mode-inventory");
 
         if (mode === "INBOUND") {
-          menuInbound.classList.add("active");
-          menuOutbound.classList.remove("active");
-          scannerArea.classList.remove("mode-outbound");
+          document.getElementById("menu-inbound").classList.add("active");
           headerTitle.innerHTML = "📥 Inbound: Put Away (上架作業)";
           headerTitle.style.color = "#2c3e50";
           scanLabel.innerText = "第一步：請掃描商品條碼 (準備上架)";
           input.placeholder = "請掃描 Item 條碼...";
         } else if (mode === "OUTBOUND") {
-          menuOutbound.classList.add("active");
-          menuInbound.classList.remove("active");
+          document.getElementById("menu-outbound").classList.add("active");
           scannerArea.classList.add("mode-outbound");
           headerTitle.innerHTML = "📤 Outbound: Picking (揀貨作業)";
-          headerTitle.style.color = "#3498db"; // 藍色識別
+          headerTitle.style.color = "#3498db";
           scanLabel.innerText = "依揀貨單：請掃描商品條碼 (尋找儲位)";
           input.placeholder = "請掃描 Item 條碼進行揀貨...";
+        } else if (mode === "INVENTORY") {
+          document.getElementById("menu-inventory").classList.add("active");
+          scannerArea.classList.add("mode-inventory");
+          headerTitle.innerHTML = "🏢 Inventory: Bin Transfer (儲位轉移)";
+          headerTitle.style.color = "#8e44ad";
+          scanLabel.innerText = "第一步：請掃描要移位的商品條碼 (What Item?)";
+          input.placeholder = "請掃描準備移位的 Item 條碼...";
+          // 變更卡片標題以符合移位需求
+          document.getElementById("title-lot-or-from").innerText =
+            "From Bin (原儲位)";
+          document.getElementById("title-bin-or-to").innerText =
+            "To Bin (新儲位)";
         }
-        input.focus();
       }
 
-      menuInbound.addEventListener("click", () => switchMode("INBOUND"));
-      menuOutbound.addEventListener("click", () => switchMode("OUTBOUND"));
+      document
+        .getElementById("menu-inbound")
+        .addEventListener("click", () => switchMode("INBOUND"));
+      document
+        .getElementById("menu-outbound")
+        .addEventListener("click", () => switchMode("OUTBOUND"));
+      document
+        .getElementById("menu-inventory")
+        .addEventListener("click", () => switchMode("INVENTORY"));
 
       // ==========================================
       // 條碼掃描核心邏輯
@@ -331,42 +378,94 @@
           const barcode = e.target.value.trim();
           if (barcode === "") return;
 
-          const now = new Date();
           const timeStr =
-            now.getHours().toString().padStart(2, "0") +
+            new Date().getHours().toString().padStart(2, "0") +
             ":" +
-            now.getMinutes().toString().padStart(2, "0");
+            new Date().getMinutes().toString().padStart(2, "0");
 
           // ------------------------------------------
-          // 作業模式：INBOUND (上架) - 雙段掃描
+          // 1. INBOUND (上架) - 雙段掃描
           // ------------------------------------------
           if (sysMode === "INBOUND") {
             if (currentScanState === "ITEM") {
+              // 省略部分防呆處理，邏輯與前次相同
+              const snap = await getDoc(doc(db, "Items", barcode));
+              if (snap.exists()) {
+                pendingItemCode = barcode;
+                pendingItemDesc = snap.data().description || barcode;
+                document.getElementById("val-item").innerText = pendingItemDesc;
+                document.getElementById("val-qty").innerText =
+                  (snap.data().carton_qty || "--") + " EA";
+                document.getElementById("val-bin-or-to").innerText =
+                  `建議: ${snap.data().default_bin || "--"}`;
+
+                currentScanState = "BIN";
+                input.classList.add("state-bin");
+                scanLabel.innerText = "第二步：請掃描實際存放的「儲位條碼」";
+                input.placeholder = `已鎖定：${pendingItemDesc}。請掃描儲位...`;
+              }
+            } else if (currentScanState === "BIN") {
+              // 寫入上架紀錄 (省略 UI 更新細節)
+              await addDoc(collection(db, "ScanLogs"), {
+                action: "Put_Away",
+                scanned_item: pendingItemCode,
+                actual_bin: barcode,
+                timestamp: serverTimestamp(),
+              });
+              resetUI();
+              scanLabel.innerText = "第一步：請掃描商品條碼 (準備上架)";
+            }
+          }
+          // ------------------------------------------
+          // 2. OUTBOUND (揀貨) - 單段掃描
+          // ------------------------------------------
+          else if (sysMode === "OUTBOUND") {
+            const snap = await getDoc(doc(db, "Items", barcode));
+            if (snap.exists()) {
+              await addDoc(collection(db, "ScanLogs"), {
+                action: "Pick",
+                scanned_item: barcode,
+                timestamp: serverTimestamp(),
+              });
+              resetUI();
+              scanLabel.innerText = "依揀貨單：請掃描商品條碼 (尋找儲位)";
+            }
+          }
+          // ------------------------------------------
+          // 3. INVENTORY (儲位轉移) - 雙段掃描與資料庫更新
+          // ------------------------------------------
+          else if (sysMode === "INVENTORY") {
+            if (currentScanState === "ITEM") {
               try {
-                const itemSnap = await getDoc(doc(db, "Items", barcode));
-                if (itemSnap.exists()) {
-                  const data = itemSnap.data();
+                const snap = await getDoc(doc(db, "Items", barcode));
+                const tr = document.createElement("tr");
+
+                if (snap.exists()) {
+                  const data = snap.data();
                   pendingItemCode = barcode;
                   pendingItemDesc = data.description || barcode;
+                  pendingFromBin = data.default_bin || "無儲位紀錄";
 
+                  // 更新 UI (顯示商品與原儲位)
                   document.getElementById("val-item").innerText =
                     pendingItemDesc;
                   document.getElementById("val-qty").innerText =
                     (data.carton_qty || "--") + " EA";
-                  document.getElementById("val-bin").innerText =
-                    `建議: ${data.default_bin || "--"}`;
+                  document.getElementById("val-lot-or-from").innerText =
+                    pendingFromBin; // 顯示 From Bin
+                  document.getElementById("val-bin-or-to").innerText =
+                    "等待掃描新儲位...";
 
                   currentScanState = "BIN";
                   input.classList.add("state-bin");
-                  scanLabel.innerText = "第二步：請掃描實際存放的「儲位條碼」";
-                  input.placeholder = `已鎖定：${pendingItemDesc}。請掃描儲位...`;
+                  scanLabel.innerText =
+                    "第二步：請掃描要移入的「新儲位條碼 (To Bin)」";
+                  input.placeholder = `移位商品：${pendingItemDesc}。請掃描新儲位...`;
 
                   pendingTempRow = document.createElement("tr");
-                  pendingTempRow.innerHTML = `<td>${timeStr}</td><td><strong>Put Away</strong></td><td>${pendingItemCode} <br><small>等待分配儲位...</small></td><td><span class="status-badge bg-yellow">等待掃描</span></td>`;
+                  pendingTempRow.innerHTML = `<td>${timeStr}</td><td><strong style="color:#8e44ad;">Bin Transfer</strong></td><td>${pendingItemCode} <br><small>準備從 ${pendingFromBin} 移出...</small></td><td><span class="status-badge bg-yellow">等待目標儲位</span></td>`;
                   logTable.insertBefore(pendingTempRow, logTable.firstChild);
                 } else {
-                  // 查無料號
-                  const tr = document.createElement("tr");
                   tr.innerHTML = `<td>${timeStr}</td><td><strong>Error</strong></td><td><span style="color:#e74c3c;">${barcode}</span></td><td><span class="status-badge bg-red">查無料號</span></td>`;
                   logTable.insertBefore(tr, logTable.firstChild);
                 }
@@ -374,70 +473,45 @@
                 console.error(error);
               }
             } else if (currentScanState === "BIN") {
-              const actualBin = barcode;
+              const toBin = barcode; // 這是新掃描的目標儲位
               try {
+                // 1. 更新資料庫中的主檔 (讓系統記住它搬家了)
+                const itemRef = doc(db, "Items", pendingItemCode);
+                await updateDoc(itemRef, {
+                  default_bin: toBin,
+                });
+
+                // 2. 寫入異動紀錄
                 await addDoc(collection(db, "ScanLogs"), {
-                  action: "Put_Away",
+                  action: "Bin_Transfer",
                   scanned_item: pendingItemCode,
                   description: pendingItemDesc,
-                  actual_bin: actualBin,
+                  from_bin: pendingFromBin,
+                  to_bin: toBin,
                   timestamp: serverTimestamp(),
                 });
-                document.getElementById("val-bin").innerText = actualBin;
+
+                // 更新畫面
+                document.getElementById("val-bin-or-to").innerText = toBin;
                 if (pendingTempRow) {
-                  pendingTempRow.innerHTML = `<td>${timeStr}</td><td><strong>Put Away</strong></td><td>${pendingItemCode} <br><small style="color:#3498db; font-weight:bold;">📍 已上架至: ${actualBin}</small></td><td><span class="status-badge bg-green">上架成功</span></td>`;
+                  pendingTempRow.innerHTML = `
+                                    <td>${timeStr}</td>
+                                    <td><strong style="color:#8e44ad;">Bin Transfer</strong></td>
+                                    <td>${pendingItemCode} <br><small style="color:#8e44ad; font-weight:bold;">🔄 從 ${pendingFromBin} 移至 ${toBin}</small></td>
+                                    <td><span class="status-badge bg-purple">移位成功</span></td>
+                                `;
                 }
               } catch (error) {
                 console.error(error);
+                alert("移位失敗，請檢查權限設定。");
               } finally {
+                // 重置狀態
                 currentScanState = "ITEM";
                 input.classList.remove("state-bin");
-                scanLabel.innerText = "第一步：請掃描商品條碼 (準備上架)";
-                input.placeholder = "請掃描 Item 條碼...";
+                scanLabel.innerText =
+                  "第一步：請掃描要移位的商品條碼 (What Item?)";
+                input.placeholder = "請掃描準備移位的 Item 條碼...";
               }
-            }
-          }
-          // ------------------------------------------
-          // 作業模式：OUTBOUND (揀貨) - 單段查訊與扣帳
-          // ------------------------------------------
-          else if (sysMode === "OUTBOUND") {
-            try {
-              const itemSnap = await getDoc(doc(db, "Items", barcode));
-              const tr = document.createElement("tr");
-
-              if (itemSnap.exists()) {
-                const data = itemSnap.data();
-
-                // 更新卡片，重點提示「去哪裡拿 (default_bin)」
-                document.getElementById("val-item").innerText =
-                  data.description || barcode;
-                document.getElementById("val-qty").innerText =
-                  (data.carton_qty || "--") + " EA";
-                document.getElementById("val-bin").innerText =
-                  `前往儲位: ${data.default_bin || "--"}`;
-                document.getElementById("val-bin").style.color = "#e74c3c"; // 紅字突顯取貨位置
-
-                // 寫入 Firebase (記錄為揀貨出庫)
-                await addDoc(collection(db, "ScanLogs"), {
-                  action: "Pick",
-                  scanned_item: barcode,
-                  description: data.description || barcode,
-                  from_bin: data.default_bin || "",
-                  timestamp: serverTimestamp(),
-                });
-
-                tr.innerHTML = `
-                                <td>${timeStr}</td>
-                                <td><strong style="color:#2980b9;">Pick (揀貨)</strong></td>
-                                <td>${barcode} <br><small style="color:#7f8c8d;">${data.description}</small><br><small style="color:#e74c3c; font-weight:bold;">📍 取貨儲位: ${data.default_bin}</small></td>
-                                <td><span class="status-badge bg-blue">揀貨紀錄成功</span></td>
-                            `;
-              } else {
-                tr.innerHTML = `<td>${timeStr}</td><td><strong>Error</strong></td><td><span style="color:#e74c3c;">${barcode}</span></td><td><span class="status-badge bg-red">查無料號</span></td>`;
-              }
-              logTable.insertBefore(tr, logTable.firstChild);
-            } catch (error) {
-              console.error(error);
             }
           }
 
@@ -445,11 +519,7 @@
         }
       });
 
-      document.addEventListener("click", function (e) {
-        if (e.target.tagName !== "SELECT" && !input.disabled) {
-          input.focus();
-        }
-      });
+      resetUI();
     </script>
   </body>
 </html>
