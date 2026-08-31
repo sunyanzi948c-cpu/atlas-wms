@@ -1,233 +1,455 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-TW">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ATLAS WMS 倉儲管理系統 - 雲端版</title>
     <style>
-        :root { --primary-color: #2c3e50; --secondary-color: #e74c3c; --bg-color: #f4f7f6; --sidebar-width: 250px; }
-        body { margin: 0; font-family: 'Segoe UI', Tahoma, sans-serif; background-color: var(--bg-color); display: flex; height: 100vh; overflow: hidden; }
-        .sidebar { width: var(--sidebar-width); background-color: var(--primary-color); color: white; display: flex; flex-direction: column; }
-        .sidebar h2 { text-align: center; padding: 20px 0; margin: 0; background-color: #1a252f; color: var(--secondary-color); font-weight: 900; letter-spacing: 2px; }
-        .menu-item { padding: 15px 20px; cursor: pointer; border-bottom: 1px solid #34495e; transition: 0.3s; }
-        .menu-item:hover, .menu-item.active { background-color: var(--secondary-color); }
-        .main-content { flex: 1; display: flex; flex-direction: column; }
-        .topbar { background: #fff; padding: 15px 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
-        .role-selector select { padding: 8px; font-size: 16px; border-radius: 4px; border: 1px solid #ccc; }
-        .workspace { padding: 30px; overflow-y: auto; flex: 1; }
-        .scan-panel { background: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; border-left: 5px solid var(--secondary-color); transition: 0.3s; }
-        .scan-input { width: 100%; padding: 15px; font-size: 24px; border: 2px solid #bdc3c7; border-radius: 6px; box-sizing: border-box; margin-top: 10px; transition: 0.3s; }
-        .scan-input:focus { outline: none; border-color: var(--secondary-color); }
-        /* 狀態 B：等待掃描儲位時的視覺提示 */
-        .scan-input.mode-bin { border-color: #f39c12; background-color: #fdfae6; box-shadow: 0 0 8px rgba(243, 156, 18, 0.4); }
-        .info-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px; }
-        .card { background: #ecf0f1; padding: 15px; border-radius: 6px; text-align: center; }
-        .card-title { font-size: 12px; color: #7f8c8d; text-transform: uppercase; font-weight: bold; }
-        .card-value { font-size: 18px; color: var(--primary-color); margin-top: 5px; font-weight: bold; }
-        table { width: 100%; background: #fff; border-collapse: collapse; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-radius: 8px; overflow: hidden; }
-        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #eee; }
-        th { background-color: #f8f9fa; color: #333; }
-        .status-badge { padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; }
-        .bg-green { background: #d4edda; color: #155724; }
-        .bg-yellow { background: #fff3cd; color: #856404; }
-        .bg-red { background: #f8d7da; color: #721c24; }
+      :root {
+        --primary-color: #2c3e50;
+        --secondary-color: #e74c3c;
+        --bg-color: #f4f7f6;
+        --sidebar-width: 250px;
+      }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", Tahoma, sans-serif;
+        background-color: var(--bg-color);
+        display: flex;
+        height: 100vh;
+        overflow: hidden;
+      }
+      .sidebar {
+        width: var(--sidebar-width);
+        background-color: var(--primary-color);
+        color: white;
+        display: flex;
+        flex-direction: column;
+      }
+      .sidebar h2 {
+        text-align: center;
+        padding: 20px 0;
+        margin: 0;
+        background-color: #1a252f;
+        color: var(--secondary-color);
+        font-weight: 900;
+        letter-spacing: 2px;
+      }
+      .menu-item {
+        padding: 15px 20px;
+        cursor: pointer;
+        border-bottom: 1px solid #34495e;
+        transition: 0.3s;
+      }
+      .menu-item:hover,
+      .menu-item.active {
+        background-color: var(--secondary-color);
+      }
+      .main-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+      .topbar {
+        background: #fff;
+        padding: 15px 30px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .role-selector select {
+        padding: 8px;
+        font-size: 16px;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+      }
+      .workspace {
+        padding: 30px;
+        overflow-y: auto;
+        flex: 1;
+      }
+      .scan-panel {
+        background: #fff;
+        padding: 25px;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        margin-bottom: 20px;
+        border-left: 5px solid var(--secondary-color);
+        transition: 0.3s;
+      }
+
+      /* 模式與狀態的視覺提示 */
+      .scan-panel.mode-outbound {
+        border-left-color: #3498db;
+      }
+      .scan-input {
+        width: 100%;
+        padding: 15px;
+        font-size: 24px;
+        border: 2px solid #bdc3c7;
+        border-radius: 6px;
+        box-sizing: border-box;
+        margin-top: 10px;
+        transition: 0.3s;
+      }
+      .scan-input:focus {
+        outline: none;
+        border-color: var(--secondary-color);
+      }
+      .scan-panel.mode-outbound .scan-input:focus {
+        border-color: #3498db;
+      }
+      .scan-input.state-bin {
+        border-color: #f39c12 !important;
+        background-color: #fdfae6;
+        box-shadow: 0 0 8px rgba(243, 156, 18, 0.4);
+      }
+
+      .info-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-top: 20px;
+      }
+      .card {
+        background: #ecf0f1;
+        padding: 15px;
+        border-radius: 6px;
+        text-align: center;
+      }
+      .card-title {
+        font-size: 12px;
+        color: #7f8c8d;
+        text-transform: uppercase;
+        font-weight: bold;
+      }
+      .card-value {
+        font-size: 18px;
+        color: var(--primary-color);
+        margin-top: 5px;
+        font-weight: bold;
+      }
+      table {
+        width: 100%;
+        background: #fff;
+        border-collapse: collapse;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      th,
+      td {
+        padding: 12px 15px;
+        text-align: left;
+        border-bottom: 1px solid #eee;
+      }
+      th {
+        background-color: #f8f9fa;
+        color: #333;
+      }
+      .status-badge {
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: bold;
+      }
+      .bg-green {
+        background: #d4edda;
+        color: #155724;
+      }
+      .bg-yellow {
+        background: #fff3cd;
+        color: #856404;
+      }
+      .bg-red {
+        background: #f8d7da;
+        color: #721c24;
+      }
+      .bg-blue {
+        background: #cce5ff;
+        color: #004085;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="sidebar">
-        <h2>ATLAS WMS</h2>
-        <div class="menu-item active">📥 Inbound (收貨 / 上架)</div>
-        <div class="menu-item">📤 Outbound (揀貨 / 出貨)</div>
-        <div class="menu-item">🏢 Inventory (庫存 / 儲位)</div>
-        <div class="menu-item">🔍 Quality (品質檢驗)</div>
+      <h2>ATLAS WMS</h2>
+      <div class="menu-item active" id="menu-inbound">
+        📥 Inbound (收貨 / 上架)
+      </div>
+      <div class="menu-item" id="menu-outbound">📤 Outbound (揀貨 / 出貨)</div>
+      <div class="menu-item">🏢 Inventory (庫存 / 儲位)</div>
+      <div class="menu-item">🔍 Quality (品質檢驗)</div>
     </div>
 
     <div class="main-content">
-        <div class="topbar">
-            <h3 style="margin:0; color: #2c3e50;">📥 Inbound: Put Away (上架作業)</h3>
-            <div class="role-selector">
-                <label>模擬登入權限：</label>
-                <select id="roleSelect">
-                    <option value="warehouse">倉管人員 (Warehouse)</option>
-                    <option value="qa">品保人員 (QA)</option>
-                </select>
+      <div class="topbar">
+        <h3 id="header-title" style="margin: 0; color: #2c3e50">
+          📥 Inbound: Put Away (上架作業)
+        </h3>
+        <div class="role-selector">
+          <label>模擬登入權限：</label>
+          <select id="roleSelect">
+            <option value="warehouse">倉管人員 (Warehouse)</option>
+            <option value="qa">品保人員 (QA)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="workspace">
+        <div class="scan-panel" id="scanner-area">
+          <label id="scan-label" style="font-weight: bold; color: #333"
+            >第一步：請掃描商品條碼 (What Item?)</label
+          >
+          <input
+            type="text"
+            id="barcodeInput"
+            class="scan-input"
+            placeholder="請掃描 Item 條碼..."
+            autocomplete="off" />
+
+          <div class="info-cards">
+            <div class="card">
+              <div class="card-title">What Item? (料號)</div>
+              <div class="card-value" id="val-item">--</div>
             </div>
+            <div class="card">
+              <div class="card-title">How Many? (數量)</div>
+              <div class="card-value" id="val-qty">--</div>
+            </div>
+            <div class="card">
+              <div class="card-title">Which Lot? (批號)</div>
+              <div class="card-value" id="val-lot">--</div>
+            </div>
+            <div class="card">
+              <div class="card-title">Where is it? (儲位指示)</div>
+              <div class="card-value" id="val-bin">--</div>
+            </div>
+          </div>
         </div>
 
-        <div class="workspace">
-            <div class="scan-panel" id="scanner-area">
-                <label id="scan-label" style="font-weight: bold; color: #333;">第一步：請掃描商品條碼 (What Item?)</label>
-                <input type="text" id="barcodeInput" class="scan-input" placeholder="請掃描 Item 條碼..." autocomplete="off">
-                
-                <div class="info-cards">
-                    <div class="card"><div class="card-title">What Item? (料號)</div><div class="card-value" id="val-item">--</div></div>
-                    <div class="card"><div class="card-title">How Many? (數量)</div><div class="card-value" id="val-qty">--</div></div>
-                    <div class="card"><div class="card-title">Which Lot? (批號)</div><div class="card-value" id="val-lot">--</div></div>
-                    <div class="card"><div class="card-title">Where is it? (實際儲位)</div><div class="card-value" id="val-bin">--</div></div>
-                </div>
-            </div>
-
-            <h4 style="color: #7f8c8d;">雲端作業紀錄 (即時寫入 Firestore)</h4>
-            <table>
-                <thead><tr><th>時間</th><th>動作</th><th>料號與儲位明細</th><th>狀態</th></tr></thead>
-                <tbody id="transaction-log"></tbody>
-            </table>
-        </div>
+        <h4 style="color: #7f8c8d">雲端作業紀錄 (即時寫入 Firestore)</h4>
+        <table>
+          <thead>
+            <tr>
+              <th>時間</th>
+              <th>動作</th>
+              <th>料號與儲位明細</th>
+              <th>狀態</th>
+            </tr>
+          </thead>
+          <tbody id="transaction-log"></tbody>
+        </table>
+      </div>
     </div>
 
-    <!-- 載入 Firebase 模組化 SDK -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+      import {
+        getFirestore,
+        collection,
+        addDoc,
+        serverTimestamp,
+        doc,
+        getDoc,
+      } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyDsHhR_etZaAXVQpyzMDm1IVN7j1ZMWyH0",
-            authDomain: "atlas-wms.firebaseapp.com",
-            projectId: "atlas-wms",
-            storageBucket: "atlas-wms.firebasestorage.app",
-            messagingSenderId: "686564888137",
-            appId: "1:686564888137:web:ace7d02ccab06137c2b998"
-        };
+      const firebaseConfig = {
+        apiKey: "AIzaSyDsHhR_etZaAXVQpyzMDm1IVN7j1ZMWyH0",
+        authDomain: "atlas-wms.firebaseapp.com",
+        projectId: "atlas-wms",
+        storageBucket: "atlas-wms.firebasestorage.app",
+        messagingSenderId: "686564888137",
+        appId: "1:686564888137:web:ace7d02ccab06137c2b998",
+      };
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+      const app = initializeApp(firebaseConfig);
+      const db = getFirestore(app);
 
-        const input = document.getElementById('barcodeInput');
-        const scanLabel = document.getElementById('scan-label');
-        const logTable = document.getElementById('transaction-log');
-        
-        // 狀態機變數：追蹤目前掃描進度
-        let currentScanState = 'ITEM'; // 初始狀態為 'ITEM' (等待掃描商品)
-        let pendingItemCode = '';
-        let pendingItemDesc = '';
-        let pendingTempRow = null; // 用來暫存表格中的「等待中」列
+      // UI 元素
+      const input = document.getElementById("barcodeInput");
+      const scanLabel = document.getElementById("scan-label");
+      const logTable = document.getElementById("transaction-log");
+      const scannerArea = document.getElementById("scanner-area");
+      const headerTitle = document.getElementById("header-title");
+      const menuInbound = document.getElementById("menu-inbound");
+      const menuOutbound = document.getElementById("menu-outbound");
 
+      // 系統變數
+      let sysMode = "INBOUND"; // 當前作業模式 (INBOUND 或 OUTBOUND)
+      let currentScanState = "ITEM"; // 狀態機：ITEM 或 BIN
+      let pendingItemCode = "";
+      let pendingItemDesc = "";
+      let pendingTempRow = null;
+
+      input.focus();
+
+      // ==========================================
+      // 模式切換邏輯 (左側選單)
+      // ==========================================
+      function switchMode(mode) {
+        sysMode = mode;
+        currentScanState = "ITEM"; // 切換模式時重置狀態
+        input.value = "";
+        input.classList.remove("state-bin");
+
+        // 重置卡片
+        document
+          .querySelectorAll(".card-value")
+          .forEach((el) => (el.innerText = "--"));
+
+        if (mode === "INBOUND") {
+          menuInbound.classList.add("active");
+          menuOutbound.classList.remove("active");
+          scannerArea.classList.remove("mode-outbound");
+          headerTitle.innerHTML = "📥 Inbound: Put Away (上架作業)";
+          headerTitle.style.color = "#2c3e50";
+          scanLabel.innerText = "第一步：請掃描商品條碼 (準備上架)";
+          input.placeholder = "請掃描 Item 條碼...";
+        } else if (mode === "OUTBOUND") {
+          menuOutbound.classList.add("active");
+          menuInbound.classList.remove("active");
+          scannerArea.classList.add("mode-outbound");
+          headerTitle.innerHTML = "📤 Outbound: Picking (揀貨作業)";
+          headerTitle.style.color = "#3498db"; // 藍色識別
+          scanLabel.innerText = "依揀貨單：請掃描商品條碼 (尋找儲位)";
+          input.placeholder = "請掃描 Item 條碼進行揀貨...";
+        }
         input.focus();
+      }
 
-        input.addEventListener('keypress', async function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                const barcode = e.target.value.trim();
-                if (barcode === "") return;
+      menuInbound.addEventListener("click", () => switchMode("INBOUND"));
+      menuOutbound.addEventListener("click", () => switchMode("OUTBOUND"));
 
-                const now = new Date();
-                const timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+      // ==========================================
+      // 條碼掃描核心邏輯
+      // ==========================================
+      input.addEventListener("keypress", async function (e) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          const barcode = e.target.value.trim();
+          if (barcode === "") return;
 
-                // ==========================================
-                // 狀態 A：掃描商品 (ITEM)
-                // ==========================================
-                if (currentScanState === 'ITEM') {
-                    try {
-                        const itemRef = doc(db, "Items", barcode);
-                        const itemSnap = await getDoc(itemRef);
+          const now = new Date();
+          const timeStr =
+            now.getHours().toString().padStart(2, "0") +
+            ":" +
+            now.getMinutes().toString().padStart(2, "0");
 
-                        if (itemSnap.exists()) {
-                            const itemData = itemSnap.data();
-                            
-                            // 紀錄暫存資料，準備進入狀態 B
-                            pendingItemCode = barcode;
-                            pendingItemDesc = itemData.description || barcode;
+          // ------------------------------------------
+          // 作業模式：INBOUND (上架) - 雙段掃描
+          // ------------------------------------------
+          if (sysMode === "INBOUND") {
+            if (currentScanState === "ITEM") {
+              try {
+                const itemSnap = await getDoc(doc(db, "Items", barcode));
+                if (itemSnap.exists()) {
+                  const data = itemSnap.data();
+                  pendingItemCode = barcode;
+                  pendingItemDesc = data.description || barcode;
 
-                            // 更新畫面卡片 (帶出預設建議儲位)
-                            document.getElementById('val-item').innerText = pendingItemDesc;
-                            document.getElementById('val-qty').innerText = (itemData.carton_qty || '--') + " EA / CTN";
-                            document.getElementById('val-lot').innerText = "待確認";
-                            document.getElementById('val-bin').innerText = `建議: ${itemData.default_bin || '--'}`;
+                  document.getElementById("val-item").innerText =
+                    pendingItemDesc;
+                  document.getElementById("val-qty").innerText =
+                    (data.carton_qty || "--") + " EA";
+                  document.getElementById("val-bin").innerText =
+                    `建議: ${data.default_bin || "--"}`;
 
-                            // 改變輸入框外觀與提示文字，進入「狀態 B」
-                            currentScanState = 'BIN';
-                            input.classList.add('mode-bin');
-                            scanLabel.innerText = "第二步：請掃描實際存放的「儲位條碼」(Where is it?)";
-                            input.placeholder = `已鎖定商品：${pendingItemDesc}。請掃描儲位...`;
+                  currentScanState = "BIN";
+                  input.classList.add("state-bin");
+                  scanLabel.innerText = "第二步：請掃描實際存放的「儲位條碼」";
+                  input.placeholder = `已鎖定：${pendingItemDesc}。請掃描儲位...`;
 
-                            // 在表格新增一筆「等待儲位中」的暫存紀錄
-                            pendingTempRow = document.createElement('tr');
-                            pendingTempRow.innerHTML = `
-                                <td>${timeStr}</td>
-                                <td><strong>Put Away</strong></td>
-                                <td>${pendingItemCode} <br><small style="color:#7f8c8d;">等待分配儲位...</small></td>
-                                <td><span class="status-badge bg-yellow">等待掃描儲位</span></td>
-                            `;
-                            logTable.insertBefore(pendingTempRow, logTable.firstChild);
-
-                        } else {
-                            // 掃到未建檔商品，重置卡片，不改變狀態
-                            document.getElementById('val-item').innerText = "未建檔商品";
-                            document.getElementById('val-qty').innerText = "--";
-                            document.getElementById('val-lot').innerText = "--";
-                            document.getElementById('val-bin').innerText = "--";
-
-                            const tr = document.createElement('tr');
-                            tr.innerHTML = `
-                                <td>${timeStr}</td>
-                                <td><strong>Error</strong></td>
-                                <td><span style="color:#e74c3c; font-weight:bold;">${barcode}</span></td>
-                                <td><span class="status-badge bg-red">查無此料號</span></td>
-                            `;
-                            logTable.insertBefore(tr, logTable.firstChild);
-                        }
-                    } catch (error) {
-                        console.error("查詢失敗: ", error);
-                        alert("連線失敗，請檢查網路。");
-                    }
-                } 
-                // ==========================================
-                // 狀態 B：掃描儲位 (BIN)
-                // ==========================================
-                else if (currentScanState === 'BIN') {
-                    // 這裡的 barcode 就是「實際儲位碼」(如 LC-14-08-10 或 A01-01)
-                    const actualBin = barcode;
-                    
-                    try {
-                        // 正式將「商品 + 儲位」寫入資料庫
-                        await addDoc(collection(db, "ScanLogs"), {
-                            action: "Put_Away",
-                            scanned_item: pendingItemCode,
-                            description: pendingItemDesc,
-                            actual_bin: actualBin,
-                            timestamp: serverTimestamp(),
-                            operator: "Warehouse_User"
-                        });
-
-                        // 更新畫面卡片顯示最終實際儲位
-                        document.getElementById('val-bin').innerText = actualBin;
-
-                        // 更新剛才那筆「等待中」的表格紀錄為「成功」
-                        if (pendingTempRow) {
-                            pendingTempRow.innerHTML = `
-                                <td>${timeStr}</td>
-                                <td><strong>Put Away</strong></td>
-                                <td>${pendingItemCode} <br><small style="color:#3498db; font-weight:bold;">📍 已上架至: ${actualBin}</small></td>
-                                <td><span class="status-badge bg-green">上架成功</span></td>
-                            `;
-                        }
-
-                    } catch (error) {
-                        console.error("寫入失敗: ", error);
-                        alert("上架紀錄寫入失敗。");
-                    } finally {
-                        // 流程結束，將狀態與畫面重置回「狀態 A (ITEM)」，準備下一筆進貨
-                        currentScanState = 'ITEM';
-                        pendingItemCode = '';
-                        pendingItemDesc = '';
-                        pendingTempRow = null;
-                        
-                        input.classList.remove('mode-bin');
-                        scanLabel.innerText = "第一步：請掃描商品條碼 (What Item?)";
-                        input.placeholder = "請掃描 Item 條碼...";
-                    }
+                  pendingTempRow = document.createElement("tr");
+                  pendingTempRow.innerHTML = `<td>${timeStr}</td><td><strong>Put Away</strong></td><td>${pendingItemCode} <br><small>等待分配儲位...</small></td><td><span class="status-badge bg-yellow">等待掃描</span></td>`;
+                  logTable.insertBefore(pendingTempRow, logTable.firstChild);
+                } else {
+                  // 查無料號
+                  const tr = document.createElement("tr");
+                  tr.innerHTML = `<td>${timeStr}</td><td><strong>Error</strong></td><td><span style="color:#e74c3c;">${barcode}</span></td><td><span class="status-badge bg-red">查無料號</span></td>`;
+                  logTable.insertBefore(tr, logTable.firstChild);
                 }
-                
-                // 清空輸入框，維持焦點
-                e.target.value = '';
+              } catch (error) {
+                console.error(error);
+              }
+            } else if (currentScanState === "BIN") {
+              const actualBin = barcode;
+              try {
+                await addDoc(collection(db, "ScanLogs"), {
+                  action: "Put_Away",
+                  scanned_item: pendingItemCode,
+                  description: pendingItemDesc,
+                  actual_bin: actualBin,
+                  timestamp: serverTimestamp(),
+                });
+                document.getElementById("val-bin").innerText = actualBin;
+                if (pendingTempRow) {
+                  pendingTempRow.innerHTML = `<td>${timeStr}</td><td><strong>Put Away</strong></td><td>${pendingItemCode} <br><small style="color:#3498db; font-weight:bold;">📍 已上架至: ${actualBin}</small></td><td><span class="status-badge bg-green">上架成功</span></td>`;
+                }
+              } catch (error) {
+                console.error(error);
+              } finally {
+                currentScanState = "ITEM";
+                input.classList.remove("state-bin");
+                scanLabel.innerText = "第一步：請掃描商品條碼 (準備上架)";
+                input.placeholder = "請掃描 Item 條碼...";
+              }
             }
-        });
+          }
+          // ------------------------------------------
+          // 作業模式：OUTBOUND (揀貨) - 單段查訊與扣帳
+          // ------------------------------------------
+          else if (sysMode === "OUTBOUND") {
+            try {
+              const itemSnap = await getDoc(doc(db, "Items", barcode));
+              const tr = document.createElement("tr");
 
-        document.addEventListener('click', function(e) {
-            if (e.target.tagName !== 'SELECT' && !input.disabled) {
-                input.focus();
+              if (itemSnap.exists()) {
+                const data = itemSnap.data();
+
+                // 更新卡片，重點提示「去哪裡拿 (default_bin)」
+                document.getElementById("val-item").innerText =
+                  data.description || barcode;
+                document.getElementById("val-qty").innerText =
+                  (data.carton_qty || "--") + " EA";
+                document.getElementById("val-bin").innerText =
+                  `前往儲位: ${data.default_bin || "--"}`;
+                document.getElementById("val-bin").style.color = "#e74c3c"; // 紅字突顯取貨位置
+
+                // 寫入 Firebase (記錄為揀貨出庫)
+                await addDoc(collection(db, "ScanLogs"), {
+                  action: "Pick",
+                  scanned_item: barcode,
+                  description: data.description || barcode,
+                  from_bin: data.default_bin || "",
+                  timestamp: serverTimestamp(),
+                });
+
+                tr.innerHTML = `
+                                <td>${timeStr}</td>
+                                <td><strong style="color:#2980b9;">Pick (揀貨)</strong></td>
+                                <td>${barcode} <br><small style="color:#7f8c8d;">${data.description}</small><br><small style="color:#e74c3c; font-weight:bold;">📍 取貨儲位: ${data.default_bin}</small></td>
+                                <td><span class="status-badge bg-blue">揀貨紀錄成功</span></td>
+                            `;
+              } else {
+                tr.innerHTML = `<td>${timeStr}</td><td><strong>Error</strong></td><td><span style="color:#e74c3c;">${barcode}</span></td><td><span class="status-badge bg-red">查無料號</span></td>`;
+              }
+              logTable.insertBefore(tr, logTable.firstChild);
+            } catch (error) {
+              console.error(error);
             }
-        });
+          }
+
+          e.target.value = "";
+        }
+      });
+
+      document.addEventListener("click", function (e) {
+        if (e.target.tagName !== "SELECT" && !input.disabled) {
+          input.focus();
+        }
+      });
     </script>
-</body>
+  </body>
 </html>
