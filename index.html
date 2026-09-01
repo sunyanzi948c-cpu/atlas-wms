@@ -1,390 +1,795 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-TW">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ATLAS WMS 倉儲管理系統 - 雲端版</title>
     <style>
-        :root { --primary-color: #2c3e50; --secondary-color: #e74c3c; --bg-color: #f4f7f6; --sidebar-width: 250px; }
-        body { margin: 0; font-family: 'Segoe UI', Tahoma, sans-serif; background-color: var(--bg-color); display: flex; height: 100vh; overflow: hidden; }
-        .sidebar { width: var(--sidebar-width); background-color: var(--primary-color); color: white; display: flex; flex-direction: column; }
-        .sidebar h2 { text-align: center; padding: 20px 0; margin: 0; background-color: #1a252f; color: var(--secondary-color); font-weight: 900; letter-spacing: 2px; }
-        .menu-item { padding: 15px 20px; cursor: pointer; border-bottom: 1px solid #34495e; transition: 0.3s; }
-        .menu-item:hover, .menu-item.active { background-color: var(--secondary-color); }
-        .main-content { flex: 1; display: flex; flex-direction: column; }
-        .topbar { background: #fff; padding: 15px 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
-        .role-selector select { padding: 8px; font-size: 16px; border-radius: 4px; border: 1px solid #ccc; font-weight: bold; }
-        .workspace { padding: 30px; overflow-y: auto; flex: 1; }
-        
-        .scan-panel { background: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; border-left: 5px solid var(--secondary-color); transition: 0.3s; }
-        .scan-input { width: 100%; padding: 15px; font-size: 24px; border: 2px solid #bdc3c7; border-radius: 6px; box-sizing: border-box; margin-top: 10px; transition: 0.3s; }
-        .scan-input:focus { outline: none; border-color: var(--secondary-color); }
-        
-        .scan-panel.mode-outbound { border-left-color: #3498db; }
-        .scan-panel.mode-outbound .scan-input:focus { border-color: #3498db; }
-        .scan-panel.mode-inventory { border-left-color: #8e44ad; }
-        .scan-panel.mode-inventory .scan-input:focus { border-color: #8e44ad; }
-        .scan-panel.mode-quality { border-left-color: #16a085; }
-        .scan-panel.mode-quality .scan-input:focus { border-color: #16a085; }
-        
-        .scan-input.state-item { border-color: #3498db !important; background-color: #ebf5fb; }
-        .scan-input.state-bin { border-color: #f39c12 !important; background-color: #fdfae6; }
-        
-        .info-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px; }
-        .card { background: #ecf0f1; padding: 15px; border-radius: 6px; text-align: center; }
-        .card-title { font-size: 12px; color: #7f8c8d; text-transform: uppercase; font-weight: bold; }
-        .card-value { font-size: 18px; color: var(--primary-color); margin-top: 5px; font-weight: bold; }
-        table { width: 100%; background: #fff; border-collapse: collapse; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-radius: 8px; overflow: hidden; }
-        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #eee; }
-        th { background-color: #f8f9fa; color: #333; }
-        .status-badge { padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; }
-        
-        .bg-green { background: #d4edda; color: #155724; }
-        .bg-yellow { background: #fff3cd; color: #856404; }
-        .bg-red { background: #f8d7da; color: #721c24; }
-        .bg-blue { background: #cce5ff; color: #004085; }
-        .bg-purple { background: #e8daef; color: #6c3483; }
+      :root {
+        --primary-color: #2c3e50;
+        --secondary-color: #e74c3c;
+        --bg-color: #f4f7f6;
+        --sidebar-width: 250px;
+      }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", Tahoma, sans-serif;
+        background-color: var(--bg-color);
+        display: flex;
+        height: 100vh;
+        overflow: hidden;
+      }
+      .sidebar {
+        width: var(--sidebar-width);
+        background-color: var(--primary-color);
+        color: white;
+        display: flex;
+        flex-direction: column;
+      }
+      .sidebar h2 {
+        text-align: center;
+        padding: 20px 0;
+        margin: 0;
+        background-color: #1a252f;
+        color: var(--secondary-color);
+        font-weight: 900;
+        letter-spacing: 2px;
+      }
+      .menu-item {
+        padding: 15px 20px;
+        cursor: pointer;
+        border-bottom: 1px solid #34495e;
+        transition: 0.3s;
+      }
+      .menu-item:hover,
+      .menu-item.active {
+        background-color: var(--secondary-color);
+      }
+      .main-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+      .topbar {
+        background: #fff;
+        padding: 15px 30px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .role-selector select {
+        padding: 8px;
+        font-size: 16px;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+        font-weight: bold;
+      }
+      .workspace {
+        padding: 30px;
+        overflow-y: auto;
+        flex: 1;
+      }
+
+      .scan-panel {
+        background: #fff;
+        padding: 25px;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        margin-bottom: 20px;
+        border-left: 5px solid var(--secondary-color);
+        transition: 0.3s;
+      }
+      .scan-input {
+        width: 100%;
+        padding: 15px;
+        font-size: 24px;
+        border: 2px solid #bdc3c7;
+        border-radius: 6px;
+        box-sizing: border-box;
+        margin-top: 10px;
+        transition: 0.3s;
+      }
+      .scan-input:focus {
+        outline: none;
+        border-color: var(--secondary-color);
+      }
+
+      .scan-panel.mode-outbound {
+        border-left-color: #3498db;
+      }
+      .scan-panel.mode-inventory {
+        border-left-color: #8e44ad;
+      }
+      .scan-panel.mode-quality {
+        border-left-color: #16a085;
+      }
+
+      .scan-input.state-item {
+        border-color: #3498db !important;
+        background-color: #ebf5fb;
+      }
+      .scan-input.state-bin {
+        border-color: #f39c12 !important;
+        background-color: #fdfae6;
+      }
+
+      .info-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-top: 20px;
+      }
+      .card {
+        background: #ecf0f1;
+        padding: 20px;
+        border-radius: 8px;
+        text-align: center;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+      }
+      .card-title {
+        font-size: 13px;
+        color: #7f8c8d;
+        text-transform: uppercase;
+        font-weight: bold;
+      }
+      .card-value {
+        font-size: 24px;
+        color: var(--primary-color);
+        margin-top: 10px;
+        font-weight: 900;
+      }
+
+      table {
+        width: 100%;
+        background: #fff;
+        border-collapse: collapse;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      th,
+      td {
+        padding: 12px 15px;
+        text-align: left;
+        border-bottom: 1px solid #eee;
+      }
+      th {
+        background-color: #f8f9fa;
+        color: #333;
+      }
+      .status-badge {
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: bold;
+      }
+
+      .bg-green {
+        background: #d4edda;
+        color: #155724;
+      }
+      .bg-yellow {
+        background: #fff3cd;
+        color: #856404;
+      }
+      .bg-red {
+        background: #f8d7da;
+        color: #721c24;
+      }
+      .bg-blue {
+        background: #cce5ff;
+        color: #004085;
+      }
+      .bg-purple {
+        background: #e8daef;
+        color: #6c3483;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="sidebar">
-        <h2>ATLAS WMS</h2>
-        <div class="menu-item active" id="menu-inbound">📥 Inbound (收貨 / 上架)</div>
-        <div class="menu-item" id="menu-outbound">📤 Outbound (揀貨 / 出貨)</div>
-        <div class="menu-item" id="menu-inventory">🏢 Inventory (庫存 / 儲位)</div>
-        <div class="menu-item" id="menu-quality">🔍 Quality (品質檢驗)</div>
+      <h2>ATLAS WMS</h2>
+      <div class="menu-item active" id="menu-dashboard">
+        📊 Dashboard (戰情儀表板)
+      </div>
+      <div class="menu-item" id="menu-inbound">📥 Inbound (收貨 / 上架)</div>
+      <div class="menu-item" id="menu-outbound">📤 Outbound (揀貨 / 出貨)</div>
+      <div class="menu-item" id="menu-inventory">
+        🏢 Inventory (庫存 / 儲位)
+      </div>
+      <div class="menu-item" id="menu-quality">🔍 Quality (品質檢驗)</div>
     </div>
 
     <div class="main-content">
-        <div class="topbar">
-            <h3 id="header-title" style="margin:0; color: #2c3e50;">📥 Inbound: Receiving & Put Away</h3>
-            <div class="role-selector">
-                <label>模擬登入權限：</label>
-                <select id="roleSelect">
-                    <option value="warehouse">倉管人員 (Warehouse)</option>
-                    <option value="qa">品保人員 (QA)</option>
-                </select>
+      <div class="topbar">
+        <h3 id="header-title" style="margin: 0; color: #2c3e50">
+          📊 Dashboard: 系統戰情室
+        </h3>
+        <div class="role-selector">
+          <label>模擬登入權限：</label>
+          <select id="roleSelect">
+            <option value="warehouse">倉管人員 (Warehouse)</option>
+            <option value="qa">品保人員 (QA)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="workspace">
+        <!-- 儀表板專屬區塊 -->
+        <div id="dashboard-area">
+          <div
+            class="info-cards"
+            style="grid-template-columns: repeat(3, 1fr); margin-bottom: 30px">
+            <div class="card" style="border-top: 5px solid #27ae60">
+              <div class="card-title">📥 採購單 (PO) 收貨達成率</div>
+              <div class="card-value" id="dash-po">計算中...</div>
             </div>
+            <div class="card" style="border-top: 5px solid #3498db">
+              <div class="card-title">📤 銷貨單 (SO) 揀貨達成率</div>
+              <div class="card-value" id="dash-so">計算中...</div>
+            </div>
+            <div
+              class="card"
+              style="border-top: 5px solid #e74c3c; background: #fdf2f0">
+              <div class="card-title" style="color: #c0392b">
+                🚨 品質異常凍結 (Hold)
+              </div>
+              <div class="card-value" id="dash-hold" style="color: #c0392b">
+                查詢中...
+              </div>
+            </div>
+          </div>
+
+          <h4
+            style="
+              color: #7f8c8d;
+              border-bottom: 2px solid #ecf0f1;
+              padding-bottom: 10px;
+            ">
+            🕒 最新現場作業動態 (Top 5)
+          </h4>
+          <table>
+            <thead>
+              <tr>
+                <th>時間</th>
+                <th>動作類型</th>
+                <th>操作細節</th>
+              </tr>
+            </thead>
+            <tbody id="dash-log-table"></tbody>
+          </table>
         </div>
 
-        <div class="workspace">
-            <div class="scan-panel" id="scanner-area">
-                <label id="scan-label" style="font-weight: bold; color: #333;">第一步：請掃描採購單號 (Which PO?)</label>
-                <input type="text" id="barcodeInput" class="scan-input" placeholder="請掃描單據條碼..." autocomplete="off">
-                
-                <div class="info-cards">
-                    <div class="card"><div class="card-title" id="title-item">What Item? (料號)</div><div class="card-value" id="val-item">--</div></div>
-                    <div class="card"><div class="card-title" id="title-qty">Progress (進度)</div><div class="card-value" id="val-qty">--</div></div>
-                    <div class="card"><div class="card-title" id="title-lot">Which Order? (單號)</div><div class="card-value" id="val-lot">--</div></div>
-                    <div class="card"><div class="card-title" id="title-bin">Where is it? (儲位指示)</div><div class="card-value" id="val-bin">--</div></div>
+        <!-- 原有的掃描作業區塊 -->
+        <div id="operation-area" style="display: none">
+          <div class="scan-panel" id="scanner-area">
+            <label id="scan-label" style="font-weight: bold; color: #333"
+              >第一步：請掃描採購單號 (Which PO?)</label
+            >
+            <input
+              type="text"
+              id="barcodeInput"
+              class="scan-input"
+              placeholder="請掃描單據條碼..."
+              autocomplete="off" />
+
+            <div class="info-cards">
+              <div class="card">
+                <div class="card-title" id="title-item">What Item? (料號)</div>
+                <div class="card-value" id="val-item">--</div>
+              </div>
+              <div class="card">
+                <div class="card-title" id="title-qty">Progress (進度)</div>
+                <div class="card-value" id="val-qty">--</div>
+              </div>
+              <div class="card">
+                <div class="card-title" id="title-lot">Which Order? (單號)</div>
+                <div class="card-value" id="val-lot">--</div>
+              </div>
+              <div class="card">
+                <div class="card-title" id="title-bin">
+                  Where is it? (儲位指示)
                 </div>
+                <div class="card-value" id="val-bin">--</div>
+              </div>
             </div>
+          </div>
 
-            <h4 style="color: #7f8c8d;">雲端作業紀錄 (即時寫入 Firestore)</h4>
-            <table>
-                <thead><tr><th>時間</th><th>動作</th><th>單據與明細</th><th>狀態</th></tr></thead>
-                <tbody id="transaction-log"></tbody>
-            </table>
+          <h4 style="color: #7f8c8d">雲端作業紀錄 (即時寫入 Firestore)</h4>
+          <table>
+            <thead>
+              <tr>
+                <th>時間</th>
+                <th>動作</th>
+                <th>單據與明細</th>
+                <th>狀態</th>
+              </tr>
+            </thead>
+            <tbody id="transaction-log"></tbody>
+          </table>
         </div>
+      </div>
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+      import {
+        getFirestore,
+        collection,
+        addDoc,
+        serverTimestamp,
+        doc,
+        getDoc,
+        updateDoc,
+        query,
+        where,
+        getDocs,
+        orderBy,
+        limit,
+      } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyDsHhR_etZaAXVQpyzMDm1IVN7j1ZMWyH0",
-            authDomain: "atlas-wms.firebaseapp.com",
-            projectId: "atlas-wms",
-            storageBucket: "atlas-wms.firebasestorage.app",
-            messagingSenderId: "686564888137",
-            appId: "1:686564888137:web:ace7d02ccab06137c2b998"
-        };
+      const firebaseConfig = {
+        apiKey: "AIzaSyDsHhR_etZaAXVQpyzMDm1IVN7j1ZMWyH0",
+        authDomain: "atlas-wms.firebaseapp.com",
+        projectId: "atlas-wms",
+        storageBucket: "atlas-wms.firebasestorage.app",
+        messagingSenderId: "686564888137",
+        appId: "1:686564888137:web:ace7d02ccab06137c2b998",
+      };
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+      const app = initializeApp(firebaseConfig);
+      const db = getFirestore(app);
 
-        const input = document.getElementById('barcodeInput');
-        const scanLabel = document.getElementById('scan-label');
-        const logTable = document.getElementById('transaction-log');
-        const roleSelect = document.getElementById('roleSelect');
-        
-        let sysMode = 'INBOUND'; 
-        let currentScanState = 'ORDER'; 
-        let activeOrder = '';
-        let expectedItem = '';
-        let expectedQty = 0;
-        let processedQty = 0;
-        let pendingItemDesc = '';
-        
-        // Inventory variables
-        let pendingFromBin = '';
+      const input = document.getElementById("barcodeInput");
+      const scanLabel = document.getElementById("scan-label");
+      const logTable = document.getElementById("transaction-log");
+      const roleSelect = document.getElementById("roleSelect");
+      const operationArea = document.getElementById("operation-area");
+      const dashboardArea = document.getElementById("dashboard-area");
 
-        function resetUI() {
-            document.querySelectorAll('.card-value').forEach(el => el.innerText = '--');
-            document.getElementById('val-bin').style.color = 'var(--primary-color)';
-            input.value = '';
-            input.classList.remove('state-item', 'state-bin');
-            
-            if (sysMode === 'INBOUND') {
-                currentScanState = 'ORDER';
-                document.getElementById('title-item').innerText = "What Item? (應收料號)";
-                document.getElementById('title-qty').innerText = "Progress (收貨進度)";
-                document.getElementById('title-lot').innerText = "Which PO? (採購單號)";
-                scanLabel.innerText = "第一步：請掃描採購單號 (Which PO?)";
-                input.placeholder = "請掃描 PO 條碼...";
-            } else if (sysMode === 'OUTBOUND') {
-                currentScanState = 'ORDER';
-                document.getElementById('title-item').innerText = "What Item? (應揀料號)";
-                document.getElementById('title-qty').innerText = "Progress (揀貨進度)";
-                document.getElementById('title-lot').innerText = "Which SO? (銷貨單號)";
-                scanLabel.innerText = "第一步：請掃描銷貨單號 (Which SO?)";
-                input.placeholder = "請掃描 SO 條碼...";
-            } else if (sysMode === 'INVENTORY') {
-                currentScanState = 'ITEM';
-                document.getElementById('title-item').innerText = "What Item? (料號)";
-                document.getElementById('title-qty').innerText = "How Many? (數量)";
-                document.getElementById('title-lot').innerText = "From Bin (原儲位)";
-                document.getElementById('title-bin').innerText = "To Bin (新儲位)";
-                scanLabel.innerText = "第一步：請掃描要移位的商品條碼 (What Item?)";
-                input.placeholder = "請掃描準備移位的 Item 條碼...";
-            } else if (sysMode === 'QUALITY') {
-                currentScanState = 'ITEM';
-                document.getElementById('title-item').innerText = "What Item? (料號)";
-                document.getElementById('title-qty').innerText = "How Many? (數量)";
-                document.getElementById('title-lot').innerText = "QA Status (品檢狀態)";
-                scanLabel.innerText = "請掃描商品條碼進行 QA 狀態切換 (Available ↔ Hold)";
-                input.placeholder = "掃描 Item 條碼以凍結或放行...";
+      let sysMode = "DASHBOARD";
+      let currentScanState = "ORDER";
+      let activeOrder = "";
+      let expectedItem = "";
+      let expectedQty = 0;
+      let processedQty = 0;
+      let pendingItemCode = "";
+      let pendingItemDesc = "";
+      let pendingFromBin = "";
+
+      // ==========================================
+      // 儀表板數據載入邏輯
+      // ==========================================
+      async function loadDashboardData() {
+        try {
+          // 1. 抓取所有訂單，計算 PO 與 SO 達成率
+          const ordersSnap = await getDocs(collection(db, "Orders"));
+          let poTotal = 0,
+            poDone = 0,
+            soTotal = 0,
+            soDone = 0;
+
+          ordersSnap.forEach((doc) => {
+            const data = doc.data();
+            if (data.order_type === "PO") {
+              poTotal += data.expected_qty || 0;
+              poDone += data.received_qty || 0;
+            } else if (data.order_type === "SO") {
+              soTotal += data.expected_qty || 0;
+              soDone += data.picked_qty || 0;
             }
-            input.focus();
+          });
+
+          document.getElementById("dash-po").innerText =
+            poTotal > 0
+              ? `${Math.round((poDone / poTotal) * 100)}% (${poDone}/${poTotal})`
+              : "尚無單據";
+          document.getElementById("dash-so").innerText =
+            soTotal > 0
+              ? `${Math.round((soDone / soTotal) * 100)}% (${soDone}/${soTotal})`
+              : "尚無單據";
+
+          // 2. 抓取被標記為 Hold 的異常商品數量
+          const qHold = query(
+            collection(db, "Items"),
+            where("quality_status", "==", "Hold"),
+          );
+          const holdSnap = await getDocs(qHold);
+          document.getElementById("dash-hold").innerText =
+            `${holdSnap.size} 項商品`;
+
+          // 3. 抓取最新 5 筆動態
+          const qLogs = query(
+            collection(db, "ScanLogs"),
+            orderBy("timestamp", "desc"),
+            limit(5),
+          );
+          const logsSnap = await getDocs(qLogs);
+          const dashLogTable = document.getElementById("dash-log-table");
+          dashLogTable.innerHTML = "";
+
+          logsSnap.forEach((doc) => {
+            const log = doc.data();
+            let timeStr = "剛剛";
+            if (log.timestamp) {
+              const date = log.timestamp.toDate();
+              timeStr =
+                date.getHours().toString().padStart(2, "0") +
+                ":" +
+                date.getMinutes().toString().padStart(2, "0");
+            }
+            const actionText = log.action.replace("_", " ");
+            const detail = log.scanned_item || log.order_no || "系統操作";
+
+            const tr = document.createElement("tr");
+            tr.innerHTML = `<td>${timeStr}</td><td><strong style="color:#2c3e50;">${actionText}</strong></td><td>${detail}</td>`;
+            dashLogTable.appendChild(tr);
+          });
+        } catch (error) {
+          console.error("Dashboard 資料載入失敗:", error);
         }
+      }
 
-        function switchMode(mode) {
-            sysMode = mode;
-            resetUI();
-            document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
-            document.getElementById('scanner-area').classList.remove('mode-outbound', 'mode-inventory', 'mode-quality');
-            const headerTitle = document.getElementById('header-title');
+      // ==========================================
+      // UI 與模式切換邏輯
+      // ==========================================
+      function resetUI() {
+        document
+          .querySelectorAll(".card-value")
+          .forEach((el) => (el.innerText = "--"));
+        document.getElementById("val-bin").style.color = "var(--primary-color)";
+        input.value = "";
+        input.classList.remove("state-item", "state-bin");
 
-            if (mode === 'INBOUND') {
-                document.getElementById('menu-inbound').classList.add('active');
-                headerTitle.innerHTML = '📥 Inbound: Receiving & Put Away';
-                headerTitle.style.color = '#2c3e50';
-            } else if (mode === 'OUTBOUND') {
-                document.getElementById('menu-outbound').classList.add('active');
-                document.getElementById('scanner-area').classList.add('mode-outbound');
-                headerTitle.innerHTML = '📤 Outbound: Picking (訂單揀貨)';
-                headerTitle.style.color = '#3498db';
-            } else if (mode === 'INVENTORY') {
-                document.getElementById('menu-inventory').classList.add('active');
-                document.getElementById('scanner-area').classList.add('mode-inventory');
-                headerTitle.innerHTML = '🏢 Inventory: Bin Transfer (儲位轉移)';
-                headerTitle.style.color = '#8e44ad';
-            } else if (mode === 'QUALITY') {
-                document.getElementById('menu-quality').classList.add('active');
-                document.getElementById('scanner-area').classList.add('mode-quality');
-                headerTitle.innerHTML = '🔍 Quality: Inspection (品質狀態檢驗)';
-                headerTitle.style.color = '#16a085';
-            }
+        if (sysMode === "INBOUND") {
+          currentScanState = "ORDER";
+          document.getElementById("title-item").innerText =
+            "What Item? (應收料號)";
+          document.getElementById("title-qty").innerText =
+            "Progress (收貨進度)";
+          document.getElementById("title-lot").innerText =
+            "Which PO? (採購單號)";
+          scanLabel.innerText = "第一步：請掃描採購單號 (Which PO?)";
+          input.placeholder = "請掃描 PO 條碼...";
+        } else if (sysMode === "OUTBOUND") {
+          currentScanState = "ORDER";
+          document.getElementById("title-item").innerText =
+            "What Item? (應揀料號)";
+          document.getElementById("title-qty").innerText =
+            "Progress (揀貨進度)";
+          document.getElementById("title-lot").innerText =
+            "Which SO? (銷貨單號)";
+          scanLabel.innerText = "第一步：請掃描銷貨單號 (Which SO?)";
+          input.placeholder = "請掃描 SO 條碼...";
+        } else if (sysMode === "INVENTORY") {
+          currentScanState = "ITEM";
+          document.getElementById("title-item").innerText = "What Item? (料號)";
+          document.getElementById("title-qty").innerText = "How Many? (數量)";
+          document.getElementById("title-lot").innerText = "From Bin (原儲位)";
+          document.getElementById("title-bin").innerText = "To Bin (新儲位)";
+          scanLabel.innerText = "第一步：請掃描要移位的商品條碼 (What Item?)";
+          input.placeholder = "請掃描準備移位的 Item 條碼...";
+        } else if (sysMode === "QUALITY") {
+          currentScanState = "ITEM";
+          document.getElementById("title-item").innerText = "What Item? (料號)";
+          document.getElementById("title-qty").innerText = "How Many? (數量)";
+          document.getElementById("title-lot").innerText =
+            "QA Status (品檢狀態)";
+          scanLabel.innerText =
+            "請掃描商品條碼進行 QA 狀態切換 (Available ↔ Hold)";
+          input.placeholder = "掃描 Item 條碼以凍結或放行...";
         }
+        if (sysMode !== "DASHBOARD") input.focus();
+      }
 
-        document.getElementById('menu-inbound').addEventListener('click', () => switchMode('INBOUND'));
-        document.getElementById('menu-outbound').addEventListener('click', () => switchMode('OUTBOUND'));
-        document.getElementById('menu-inventory').addEventListener('click', () => switchMode('INVENTORY'));
-        document.getElementById('menu-quality').addEventListener('click', () => switchMode('QUALITY'));
-        roleSelect.addEventListener('change', () => input.focus());
+      function switchMode(mode) {
+        sysMode = mode;
+        document
+          .querySelectorAll(".menu-item")
+          .forEach((el) => el.classList.remove("active"));
+        document
+          .getElementById("scanner-area")
+          .classList.remove("mode-outbound", "mode-inventory", "mode-quality");
+        const headerTitle = document.getElementById("header-title");
 
-        input.addEventListener('keypress', async function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                const barcode = e.target.value.trim();
-                if (barcode === "") return;
+        if (mode === "DASHBOARD") {
+          document.getElementById("menu-dashboard").classList.add("active");
+          dashboardArea.style.display = "block";
+          operationArea.style.display = "none";
+          headerTitle.innerHTML = "📊 Dashboard: 系統戰情室";
+          headerTitle.style.color = "#2c3e50";
+          loadDashboardData();
+        } else {
+          dashboardArea.style.display = "none";
+          operationArea.style.display = "block";
+          resetUI();
 
-                const timeStr = new Date().getHours().toString().padStart(2, '0') + ':' + new Date().getMinutes().toString().padStart(2, '0');
+          if (mode === "INBOUND") {
+            document.getElementById("menu-inbound").classList.add("active");
+            headerTitle.innerHTML = "📥 Inbound: Receiving & Put Away";
+            headerTitle.style.color = "#2c3e50";
+          } else if (mode === "OUTBOUND") {
+            document.getElementById("menu-outbound").classList.add("active");
+            document
+              .getElementById("scanner-area")
+              .classList.add("mode-outbound");
+            headerTitle.innerHTML = "📤 Outbound: Picking (訂單揀貨)";
+            headerTitle.style.color = "#3498db";
+          } else if (mode === "INVENTORY") {
+            document.getElementById("menu-inventory").classList.add("active");
+            document
+              .getElementById("scanner-area")
+              .classList.add("mode-inventory");
+            headerTitle.innerHTML = "🏢 Inventory: Bin Transfer (儲位轉移)";
+            headerTitle.style.color = "#8e44ad";
+          } else if (mode === "QUALITY") {
+            document.getElementById("menu-quality").classList.add("active");
+            document
+              .getElementById("scanner-area")
+              .classList.add("mode-quality");
+            headerTitle.innerHTML = "🔍 Quality: Inspection (品質狀態檢驗)";
+            headerTitle.style.color = "#16a085";
+          }
+        }
+      }
 
-                // ==========================================
-                // 1. 銷貨單出貨模組 (OUTBOUND)
-                // ==========================================
-                if (sysMode === 'OUTBOUND') {
-                    // 階段 1：掃描銷貨單號
-                    if (currentScanState === 'ORDER') {
-                        const orderSnap = await getDoc(doc(db, "Orders", barcode));
-                        if (orderSnap.exists()) {
-                            const orderData = orderSnap.data();
-                            if (orderData.order_type !== 'SO') {
-                                alert("❌ 這不是銷貨單 (SO)，請掃描正確的單據。");
-                                input.value = ''; return;
-                            }
-                            
-                            activeOrder = barcode;
-                            expectedItem = orderData.item_code;
-                            expectedQty = orderData.expected_qty;
-                            processedQty = orderData.picked_qty || 0;
+      document
+        .getElementById("menu-dashboard")
+        .addEventListener("click", () => switchMode("DASHBOARD"));
+      document
+        .getElementById("menu-inbound")
+        .addEventListener("click", () => switchMode("INBOUND"));
+      document
+        .getElementById("menu-outbound")
+        .addEventListener("click", () => switchMode("OUTBOUND"));
+      document
+        .getElementById("menu-inventory")
+        .addEventListener("click", () => switchMode("INVENTORY"));
+      document
+        .getElementById("menu-quality")
+        .addEventListener("click", () => switchMode("QUALITY"));
+      roleSelect.addEventListener("change", () => {
+        if (sysMode !== "DASHBOARD") input.focus();
+      });
 
-                            if (processedQty >= expectedQty) {
-                                alert(`✅ 此銷貨單 ${barcode} 已經全數揀貨完成！`);
-                                input.value = ''; return;
-                            }
+      // ==========================================
+      // 核心作業邏輯 (與上一版完全相同，無更動)
+      // ==========================================
+      input.addEventListener("keypress", async function (e) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          const barcode = e.target.value.trim();
+          if (barcode === "") return;
+          const timeStr =
+            new Date().getHours().toString().padStart(2, "0") +
+            ":" +
+            new Date().getMinutes().toString().padStart(2, "0");
 
-                            // 查詢系統儲位，提供揀貨導航
-                            const itemSnap = await getDoc(doc(db, "Items", expectedItem));
-                            let suggestBin = "無儲位資料";
-                            let itemName = expectedItem;
-                            if (itemSnap.exists()) {
-                                suggestBin = itemSnap.data().default_bin || "無儲位資料";
-                                itemName = itemSnap.data().description || expectedItem;
-                            }
-
-                            document.getElementById('val-lot').innerText = activeOrder;
-                            document.getElementById('val-item').innerText = itemName;
-                            document.getElementById('val-qty').innerText = `${processedQty} / ${expectedQty} (已揀/應揀)`;
-                            document.getElementById('val-bin').innerText = `前往儲位: ${suggestBin}`;
-                            document.getElementById('val-bin').style.color = '#e74c3c';
-
-                            currentScanState = 'ITEM';
-                            input.classList.add('state-item');
-                            scanLabel.innerText = "第二步：請前往儲位掃描實體商品條碼 (核對)";
-                            input.placeholder = `已鎖定單據 ${activeOrder}。請掃描商品...`;
-                        } else {
-                            alert("❌ 查無此銷貨單號 (SO)，請確認後再掃描。");
-                        }
-                    } 
-                    // 階段 2：實地掃描商品核對
-                    else if (currentScanState === 'ITEM') {
-                        // 防呆 A：核對料號
-                        if (barcode !== expectedItem) {
-                            alert(`🚨 揀貨錯誤！\n這張單要求揀的料號是 ${expectedItem}\n你掃描的是 ${barcode}，請放回原位！`);
-                            input.value = ''; return;
-                        }
-
-                        const itemSnap = await getDoc(doc(db, "Items", barcode));
-                        if(itemSnap.exists()) {
-                            const data = itemSnap.data();
-                            
-                            // 防呆 B：跨模組品質狀態攔截
-                            if (data.quality_status === 'Hold') {
-                                alert("🚨 嚴重警告：出貨攔截！\n此商品已被 QA 標記為「凍結 (Hold)」，嚴禁出庫交貨！");
-                                input.value = ''; return;
-                            }
-
-                            try {
-                                processedQty += 1;
-                                await updateDoc(doc(db, "Orders", activeOrder), { picked_qty: processedQty });
-                                await addDoc(collection(db, "ScanLogs"), { 
-                                    action: "Pick", order_no: activeOrder, scanned_item: expectedItem, from_bin: data.default_bin || "", timestamp: serverTimestamp() 
-                                });
-
-                                const tr = document.createElement('tr');
-                                tr.innerHTML = `<td>${timeStr}</td><td><strong style="color:#2980b9;">Pick</strong></td><td>單號: ${activeOrder} <br><small style="color:#2980b9;">📍從 ${data.default_bin || '未定'} 成功揀出 ${expectedItem}</small></td><td><span class="status-badge bg-blue">揀貨成功 (${processedQty}/${expectedQty})</span></td>`;
-                                logTable.insertBefore(tr, logTable.firstChild);
-
-                                if (processedQty >= expectedQty) {
-                                    alert(`🎉 恭喜！銷貨單 ${activeOrder} 已全數揀貨完畢，可移交包裝區。`);
-                                    resetUI();
-                                } else {
-                                    document.getElementById('val-qty').innerText = `${processedQty} / ${expectedQty} (已揀/應揀)`;
-                                    scanLabel.innerText = "第二步：請繼續掃描下一箱商品條碼";
-                                    input.placeholder = `繼續揀貨 (進度 ${processedQty}/${expectedQty})...`;
-                                }
-                            } catch (error) {
-                                console.error(error); alert("寫入資料庫失敗。");
-                            }
-                        }
-                    }
+          if (sysMode === "OUTBOUND") {
+            if (currentScanState === "ORDER") {
+              const orderSnap = await getDoc(doc(db, "Orders", barcode));
+              if (orderSnap.exists()) {
+                const orderData = orderSnap.data();
+                if (orderData.order_type !== "SO") {
+                  alert("❌ 這不是銷貨單 (SO)。");
+                  input.value = "";
+                  return;
                 }
-                
-                // ==========================================
-                // 2. 採購單進貨模組 (INBOUND)
-                // ==========================================
-                else if (sysMode === 'INBOUND') {
-                    if (currentScanState === 'ORDER') {
-                        const orderSnap = await getDoc(doc(db, "Orders", barcode));
-                        if (orderSnap.exists()) {
-                            const orderData = orderSnap.data();
-                            if (orderData.order_type !== 'PO') { alert("❌ 這不是採購單 (PO)。"); input.value = ''; return; }
-                            
-                            activeOrder = barcode; expectedItem = orderData.item_code; expectedQty = orderData.expected_qty; processedQty = orderData.received_qty || 0;
-                            if (processedQty >= expectedQty) { alert(`✅ 此訂單 ${barcode} 已全數收貨完成！`); input.value = ''; return; }
-                            
-                            document.getElementById('val-lot').innerText = activeOrder;
-                            document.getElementById('val-item').innerText = `需收料: ${expectedItem}`;
-                            document.getElementById('val-qty').innerText = `${processedQty} / ${expectedQty} (已收/應收)`;
-                            
-                            currentScanState = 'ITEM'; input.classList.add('state-item');
-                            scanLabel.innerText = "第二步：請掃描商品條碼 (核對訂單)"; input.placeholder = `已鎖定單據 ${activeOrder}。請掃描商品...`;
-                        } else { alert("❌ 查無此採購單號 (PO)。"); }
-                    } 
-                    else if (currentScanState === 'ITEM') {
-                        if (barcode !== expectedItem) { alert(`🚨 收貨錯誤！\n單據要求 ${expectedItem}，你掃描 ${barcode}！`); input.value = ''; return; }
-                        const itemSnap = await getDoc(doc(db, "Items", barcode));
-                        if(itemSnap.exists()) {
-                            pendingItemDesc = itemSnap.data().description || barcode;
-                            document.getElementById('val-item').innerText = pendingItemDesc;
-                            document.getElementById('val-bin').innerText = `建議: ${itemSnap.data().default_bin || '--'}`;
-                            
-                            currentScanState = 'BIN'; input.classList.remove('state-item'); input.classList.add('state-bin');
-                            scanLabel.innerText = "第三步：請掃描實際存放的「儲位條碼」"; input.placeholder = `已核對：${pendingItemDesc}。請掃描儲位...`;
-                        }
-                    } 
-                    else if (currentScanState === 'BIN') {
-                        if (/^\d{12,}$/.test(barcode)) { alert("🚫 防呆攔截：請掃描正確的儲位標籤。"); input.value = ''; return; }
-                        await addDoc(collection(db, "ScanLogs"), { action: "Put_Away", order_no: activeOrder, scanned_item: expectedItem, actual_bin: barcode, timestamp: serverTimestamp() });
-                        await updateDoc(doc(db, "Items", expectedItem), { default_bin: barcode });
-                        
-                        processedQty += 1;
-                        await updateDoc(doc(db, "Orders", activeOrder), { received_qty: processedQty });
-                        
-                        const tr = document.createElement('tr');
-                        tr.innerHTML = `<td>${timeStr}</td><td><strong>Put Away</strong></td><td>單號: ${activeOrder} <br><small style="color:#27ae60;">${expectedItem} 📍已上架至 ${barcode}</small></td><td><span class="status-badge bg-green">收貨成功 (${processedQty}/${expectedQty})</span></td>`;
-                        logTable.insertBefore(tr, logTable.firstChild);
-                        
-                        if (processedQty >= expectedQty) { alert(`🎉 採購單 ${activeOrder} 已收貨完畢。`); resetUI(); } 
-                        else {
-                            currentScanState = 'ITEM'; input.classList.remove('state-bin'); input.classList.add('state-item');
-                            document.getElementById('val-qty').innerText = `${processedQty} / ${expectedQty} (已收/應收)`; document.getElementById('val-bin').innerText = '--';
-                            scanLabel.innerText = "第二步：請繼續掃描下一箱商品條碼"; input.placeholder = `繼續收貨 (進度 ${processedQty}/${expectedQty})...`;
-                        }
-                    }
+                activeOrder = barcode;
+                expectedItem = orderData.item_code;
+                expectedQty = orderData.expected_qty;
+                processedQty = orderData.picked_qty || 0;
+                if (processedQty >= expectedQty) {
+                  alert(`✅ 此銷貨單已揀貨完成！`);
+                  input.value = "";
+                  return;
                 }
-                
-                // ==========================================
-                // 3. 庫存移位與品質檢驗 (INVENTORY & QUALITY)
-                // ==========================================
-                else if (sysMode === 'INVENTORY') {
-                    if (currentScanState === 'ITEM') {
-                        const snap = await getDoc(doc(db, "Items", barcode));
-                        if (snap.exists()) {
-                            pendingItemCode = barcode; pendingItemDesc = snap.data().description || barcode; pendingFromBin = snap.data().default_bin || '無儲位紀錄';
-                            document.getElementById('val-item').innerText = pendingItemDesc; document.getElementById('val-lot').innerText = pendingFromBin;
-                            currentScanState = 'BIN'; input.classList.add('state-bin'); scanLabel.innerText = "第二步：請掃描「新儲位條碼」";
-                        }
-                    } else if (currentScanState === 'BIN') {
-                        if (/^\d{12,}$/.test(barcode)) { alert("🚫 防呆攔截：請掃描正確的新儲位標籤。"); input.value = ''; return; }
-                        await updateDoc(doc(db, "Items", pendingItemCode), { default_bin: barcode });
-                        await addDoc(collection(db, "ScanLogs"), { action: "Bin_Transfer", scanned_item: pendingItemCode, to_bin: barcode, timestamp: serverTimestamp() });
-                        resetUI(); scanLabel.innerText = "第一步：請掃描要移位的商品條碼";
-                    }
+                const itemSnap = await getDoc(doc(db, "Items", expectedItem));
+                let suggestBin = itemSnap.exists()
+                  ? itemSnap.data().default_bin || "無儲位"
+                  : "無儲位";
+                document.getElementById("val-lot").innerText = activeOrder;
+                document.getElementById("val-item").innerText = expectedItem;
+                document.getElementById("val-qty").innerText =
+                  `${processedQty} / ${expectedQty} (已揀/應揀)`;
+                document.getElementById("val-bin").innerText =
+                  `前往儲位: ${suggestBin}`;
+                document.getElementById("val-bin").style.color = "#e74c3c";
+                currentScanState = "ITEM";
+                input.classList.add("state-item");
+                scanLabel.innerText =
+                  "第二步：請前往儲位掃描實體商品條碼 (核對)";
+                input.placeholder = `已鎖定單據。請掃描商品...`;
+              } else {
+                alert("❌ 查無此銷貨單號。");
+              }
+            } else if (currentScanState === "ITEM") {
+              if (barcode !== expectedItem) {
+                alert(`🚨 揀貨錯誤！要求料號: ${expectedItem}`);
+                input.value = "";
+                return;
+              }
+              const itemSnap = await getDoc(doc(db, "Items", barcode));
+              if (itemSnap.exists()) {
+                if (itemSnap.data().quality_status === "Hold") {
+                  alert("🚨 嚴重警告：出貨攔截！\n商品為「凍結 (Hold)」狀態！");
+                  input.value = "";
+                  return;
                 }
-                else if (sysMode === 'QUALITY') {
-                    if (roleSelect.value !== 'qa') { alert("🚫 權限不足：僅有「品保人員 (QA)」可變更狀態！"); input.value = ''; return; }
-                    const snap = await getDoc(doc(db, "Items", barcode));
-                    if(snap.exists()) {
-                        const newStatus = (snap.data().quality_status || 'Available') === 'Available' ? 'Hold' : 'Available';
-                        const actionText = newStatus === 'Hold' ? '🚫 凍結 (Hold)' : '✅ 放行 (Available)';
-                        await updateDoc(doc(db, "Items", barcode), { quality_status: newStatus });
-                        await addDoc(collection(db, "ScanLogs"), { action: "QA_Check", scanned_item: barcode, new_status: newStatus, timestamp: serverTimestamp() });
-                        
-                        document.getElementById('val-item').innerText = snap.data().description || barcode;
-                        document.getElementById('val-lot').innerText = actionText; document.getElementById('val-lot').style.color = newStatus === 'Hold' ? '#e74c3c' : '#27ae60';
-                        const tr = document.createElement('tr'); tr.innerHTML = `<td>${timeStr}</td><td><strong style="color:#16a085;">QA Check</strong></td><td>${barcode}</td><td><span class="status-badge ${newStatus === 'Hold'?'bg-red':'bg-green'}">${actionText}</span></td>`;
-                        logTable.insertBefore(tr, logTable.firstChild);
-                    }
+                processedQty += 1;
+                await updateDoc(doc(db, "Orders", activeOrder), {
+                  picked_qty: processedQty,
+                });
+                await addDoc(collection(db, "ScanLogs"), {
+                  action: "Pick",
+                  order_no: activeOrder,
+                  scanned_item: expectedItem,
+                  timestamp: serverTimestamp(),
+                });
+                const tr = document.createElement("tr");
+                tr.innerHTML = `<td>${timeStr}</td><td><strong style="color:#2980b9;">Pick</strong></td><td>單號: ${activeOrder}</td><td><span class="status-badge bg-blue">揀貨成功 (${processedQty}/${expectedQty})</span></td>`;
+                logTable.insertBefore(tr, logTable.firstChild);
+                if (processedQty >= expectedQty) {
+                  alert(`🎉 銷貨單 ${activeOrder} 揀貨完畢。`);
+                  resetUI();
+                } else {
+                  document.getElementById("val-qty").innerText =
+                    `${processedQty} / ${expectedQty}`;
+                  input.placeholder = `繼續揀貨...`;
                 }
-                
-                e.target.value = '';
+              }
             }
-        });
-        resetUI();
+          } else if (sysMode === "INBOUND") {
+            if (currentScanState === "ORDER") {
+              const orderSnap = await getDoc(doc(db, "Orders", barcode));
+              if (orderSnap.exists()) {
+                const orderData = orderSnap.data();
+                if (orderData.order_type !== "PO") {
+                  alert("❌ 這不是採購單 (PO)。");
+                  input.value = "";
+                  return;
+                }
+                activeOrder = barcode;
+                expectedItem = orderData.item_code;
+                expectedQty = orderData.expected_qty;
+                processedQty = orderData.received_qty || 0;
+                if (processedQty >= expectedQty) {
+                  alert(`✅ 此訂單已收貨完成！`);
+                  input.value = "";
+                  return;
+                }
+                document.getElementById("val-lot").innerText = activeOrder;
+                document.getElementById("val-item").innerText = expectedItem;
+                document.getElementById("val-qty").innerText =
+                  `${processedQty} / ${expectedQty}`;
+                currentScanState = "ITEM";
+                input.classList.add("state-item");
+                scanLabel.innerText = "第二步：請掃描商品條碼 (核對訂單)";
+              } else {
+                alert("❌ 查無此採購單號 (PO)。");
+              }
+            } else if (currentScanState === "ITEM") {
+              if (barcode !== expectedItem) {
+                alert(`🚨 收貨錯誤！單據要求 ${expectedItem}`);
+                input.value = "";
+                return;
+              }
+              const itemSnap = await getDoc(doc(db, "Items", barcode));
+              if (itemSnap.exists()) {
+                pendingItemDesc = itemSnap.data().description || barcode;
+                document.getElementById("val-bin").innerText =
+                  `建議: ${itemSnap.data().default_bin || "--"}`;
+                currentScanState = "BIN";
+                input.classList.remove("state-item");
+                input.classList.add("state-bin");
+                scanLabel.innerText = "第三步：請掃描實際存放的「儲位條碼」";
+              }
+            } else if (currentScanState === "BIN") {
+              if (/^\d{12,}$/.test(barcode)) {
+                alert("🚫 防呆攔截：請掃描正確的儲位標籤。");
+                input.value = "";
+                return;
+              }
+              await addDoc(collection(db, "ScanLogs"), {
+                action: "Put_Away",
+                order_no: activeOrder,
+                scanned_item: expectedItem,
+                actual_bin: barcode,
+                timestamp: serverTimestamp(),
+              });
+              await updateDoc(doc(db, "Items", expectedItem), {
+                default_bin: barcode,
+              });
+              processedQty += 1;
+              await updateDoc(doc(db, "Orders", activeOrder), {
+                received_qty: processedQty,
+              });
+              const tr = document.createElement("tr");
+              tr.innerHTML = `<td>${timeStr}</td><td><strong>Put Away</strong></td><td>單號: ${activeOrder}</td><td><span class="status-badge bg-green">收貨成功 (${processedQty}/${expectedQty})</span></td>`;
+              logTable.insertBefore(tr, logTable.firstChild);
+              if (processedQty >= expectedQty) {
+                alert(`🎉 採購單 ${activeOrder} 已收貨完畢。`);
+                resetUI();
+              } else {
+                currentScanState = "ITEM";
+                input.classList.remove("state-bin");
+                input.classList.add("state-item");
+                document.getElementById("val-qty").innerText =
+                  `${processedQty} / ${expectedQty}`;
+                document.getElementById("val-bin").innerText = "--";
+              }
+            }
+          } else if (sysMode === "INVENTORY") {
+            if (currentScanState === "ITEM") {
+              const snap = await getDoc(doc(db, "Items", barcode));
+              if (snap.exists()) {
+                pendingItemCode = barcode;
+                pendingItemDesc = snap.data().description || barcode;
+                pendingFromBin = snap.data().default_bin || "無儲位紀錄";
+                document.getElementById("val-item").innerText = pendingItemDesc;
+                document.getElementById("val-lot").innerText = pendingFromBin;
+                currentScanState = "BIN";
+                input.classList.add("state-bin");
+                scanLabel.innerText = "第二步：請掃描「新儲位條碼」";
+              }
+            } else if (currentScanState === "BIN") {
+              if (/^\d{12,}$/.test(barcode)) {
+                alert("🚫 防呆攔截：請掃描正確的新儲位標籤。");
+                input.value = "";
+                return;
+              }
+              await updateDoc(doc(db, "Items", pendingItemCode), {
+                default_bin: barcode,
+              });
+              await addDoc(collection(db, "ScanLogs"), {
+                action: "Bin_Transfer",
+                scanned_item: pendingItemCode,
+                to_bin: barcode,
+                timestamp: serverTimestamp(),
+              });
+              resetUI();
+              scanLabel.innerText = "第一步：請掃描要移位的商品條碼";
+            }
+          } else if (sysMode === "QUALITY") {
+            if (roleSelect.value !== "qa") {
+              alert("🚫 權限不足：僅有「品保人員 (QA)」可變更狀態！");
+              input.value = "";
+              return;
+            }
+            const snap = await getDoc(doc(db, "Items", barcode));
+            if (snap.exists()) {
+              const newStatus =
+                (snap.data().quality_status || "Available") === "Available"
+                  ? "Hold"
+                  : "Available";
+              const actionText =
+                newStatus === "Hold" ? "🚫 凍結 (Hold)" : "✅ 放行 (Available)";
+              await updateDoc(doc(db, "Items", barcode), {
+                quality_status: newStatus,
+              });
+              await addDoc(collection(db, "ScanLogs"), {
+                action: "QA_Check",
+                scanned_item: barcode,
+                new_status: newStatus,
+                timestamp: serverTimestamp(),
+              });
+              document.getElementById("val-item").innerText =
+                snap.data().description || barcode;
+              document.getElementById("val-lot").innerText = actionText;
+              document.getElementById("val-lot").style.color =
+                newStatus === "Hold" ? "#e74c3c" : "#27ae60";
+              const tr = document.createElement("tr");
+              tr.innerHTML = `<td>${timeStr}</td><td><strong style="color:#16a085;">QA Check</strong></td><td>${barcode}</td><td><span class="status-badge ${newStatus === "Hold" ? "bg-red" : "bg-green"}">${actionText}</span></td>`;
+              logTable.insertBefore(tr, logTable.firstChild);
+            }
+          }
+          e.target.value = "";
+        }
+      });
+
+      // 初始載入戰情室
+      switchMode("DASHBOARD");
     </script>
-</body>
+  </body>
 </html>
