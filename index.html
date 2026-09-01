@@ -185,6 +185,39 @@
         background: #e8daef;
         color: #6c3483;
       }
+
+      /* Admin 表單樣式 */
+      .admin-form label {
+        display: block;
+        margin-top: 15px;
+        font-weight: bold;
+        color: #34495e;
+      }
+      .admin-form select,
+      .admin-form input {
+        width: 100%;
+        padding: 12px;
+        font-size: 18px;
+        margin-top: 5px;
+        border: 1px solid #bdc3c7;
+        border-radius: 6px;
+      }
+      .btn-submit {
+        margin-top: 25px;
+        width: 100%;
+        padding: 15px;
+        background: #2c3e50;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 18px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: 0.2s;
+      }
+      .btn-submit:hover {
+        background: #1a252f;
+      }
     </style>
   </head>
   <body>
@@ -199,6 +232,12 @@
         🏢 Inventory (庫存 / 儲位)
       </div>
       <div class="menu-item" id="menu-quality">🔍 Quality (品質檢驗)</div>
+      <div
+        class="menu-item"
+        id="menu-admin"
+        style="margin-top: auto; background: #34495e">
+        ⚙️ Admin (後台建檔)
+      </div>
     </div>
 
     <div class="main-content">
@@ -211,12 +250,13 @@
           <select id="roleSelect">
             <option value="warehouse">倉管人員 (Warehouse)</option>
             <option value="qa">品保人員 (QA)</option>
+            <option value="admin">系統管理員 (Admin)</option>
           </select>
         </div>
       </div>
 
       <div class="workspace">
-        <!-- 儀表板專屬區塊 -->
+        <!-- 儀表板區塊 -->
         <div id="dashboard-area">
           <div
             class="info-cards"
@@ -261,7 +301,7 @@
           </table>
         </div>
 
-        <!-- 原有的掃描作業區塊 -->
+        <!-- 掃描作業區塊 -->
         <div id="operation-area" style="display: none">
           <div class="scan-panel" id="scanner-area">
             <label id="scan-label" style="font-weight: bold; color: #333"
@@ -295,7 +335,6 @@
               </div>
             </div>
           </div>
-
           <h4 style="color: #7f8c8d">雲端作業紀錄 (即時寫入 Firestore)</h4>
           <table>
             <thead>
@@ -308,6 +347,52 @@
             </thead>
             <tbody id="transaction-log"></tbody>
           </table>
+        </div>
+
+        <!-- Admin 後台建檔區塊 -->
+        <div id="admin-area" style="display: none">
+          <div
+            class="card admin-form"
+            style="text-align: left; max-width: 600px; margin: 0 auto">
+            <h3
+              style="
+                margin-top: 0;
+                color: #2c3e50;
+                border-bottom: 2px solid #ecf0f1;
+                padding-bottom: 10px;
+              ">
+              📄 建立新單據 (Orders)
+            </h3>
+
+            <label>單據類型：</label>
+            <select id="admin-order-type">
+              <option value="PO">📥 採購單 (PO - 預備進貨)</option>
+              <option value="SO">📤 銷貨單 (SO - 預備出貨)</option>
+            </select>
+
+            <label>單據號碼 (如 PO-20261001)：</label>
+            <input
+              type="text"
+              id="admin-order-no"
+              placeholder="請輸入單號..." />
+
+            <label>商品條碼 (Item Code)：</label>
+            <input
+              type="text"
+              id="admin-item-code"
+              placeholder="請輸入商品條碼..." />
+
+            <label>預計處理數量 (Expected Qty)：</label>
+            <input
+              type="number"
+              id="admin-qty"
+              placeholder="請輸入數量..."
+              min="1" />
+
+            <button id="btn-submit-order" class="btn-submit">
+              確認新增單據
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -322,6 +407,7 @@
         doc,
         getDoc,
         updateDoc,
+        setDoc,
         query,
         where,
         getDocs,
@@ -347,6 +433,7 @@
       const roleSelect = document.getElementById("roleSelect");
       const operationArea = document.getElementById("operation-area");
       const dashboardArea = document.getElementById("dashboard-area");
+      const adminArea = document.getElementById("admin-area");
 
       let sysMode = "DASHBOARD";
       let currentScanState = "ORDER";
@@ -358,12 +445,9 @@
       let pendingItemDesc = "";
       let pendingFromBin = "";
 
-      // ==========================================
       // 儀表板數據載入邏輯
-      // ==========================================
       async function loadDashboardData() {
         try {
-          // 1. 抓取所有訂單，計算 PO 與 SO 達成率
           const ordersSnap = await getDocs(collection(db, "Orders"));
           let poTotal = 0,
             poDone = 0,
@@ -390,26 +474,22 @@
               ? `${Math.round((soDone / soTotal) * 100)}% (${soDone}/${soTotal})`
               : "尚無單據";
 
-          // 2. 抓取被標記為 Hold 的異常商品數量
           const qHold = query(
             collection(db, "Items"),
             where("quality_status", "==", "Hold"),
           );
-          const holdSnap = await getDocs(qHold);
           document.getElementById("dash-hold").innerText =
-            `${holdSnap.size} 項商品`;
+            `${(await getDocs(qHold)).size} 項商品`;
 
-          // 3. 抓取最新 5 筆動態
           const qLogs = query(
             collection(db, "ScanLogs"),
             orderBy("timestamp", "desc"),
             limit(5),
           );
-          const logsSnap = await getDocs(qLogs);
           const dashLogTable = document.getElementById("dash-log-table");
           dashLogTable.innerHTML = "";
 
-          logsSnap.forEach((doc) => {
+          (await getDocs(qLogs)).forEach((doc) => {
             const log = doc.data();
             let timeStr = "剛剛";
             if (log.timestamp) {
@@ -421,7 +501,6 @@
             }
             const actionText = log.action.replace("_", " ");
             const detail = log.scanned_item || log.order_no || "系統操作";
-
             const tr = document.createElement("tr");
             tr.innerHTML = `<td>${timeStr}</td><td><strong style="color:#2c3e50;">${actionText}</strong></td><td>${detail}</td>`;
             dashLogTable.appendChild(tr);
@@ -431,84 +510,62 @@
         }
       }
 
-      // ==========================================
-      // UI 與模式切換邏輯
-      // ==========================================
-      function resetUI() {
-        document
-          .querySelectorAll(".card-value")
-          .forEach((el) => (el.innerText = "--"));
-        document.getElementById("val-bin").style.color = "var(--primary-color)";
-        input.value = "";
-        input.classList.remove("state-item", "state-bin");
-
-        if (sysMode === "INBOUND") {
-          currentScanState = "ORDER";
-          document.getElementById("title-item").innerText =
-            "What Item? (應收料號)";
-          document.getElementById("title-qty").innerText =
-            "Progress (收貨進度)";
-          document.getElementById("title-lot").innerText =
-            "Which PO? (採購單號)";
-          scanLabel.innerText = "第一步：請掃描採購單號 (Which PO?)";
-          input.placeholder = "請掃描 PO 條碼...";
-        } else if (sysMode === "OUTBOUND") {
-          currentScanState = "ORDER";
-          document.getElementById("title-item").innerText =
-            "What Item? (應揀料號)";
-          document.getElementById("title-qty").innerText =
-            "Progress (揀貨進度)";
-          document.getElementById("title-lot").innerText =
-            "Which SO? (銷貨單號)";
-          scanLabel.innerText = "第一步：請掃描銷貨單號 (Which SO?)";
-          input.placeholder = "請掃描 SO 條碼...";
-        } else if (sysMode === "INVENTORY") {
-          currentScanState = "ITEM";
-          document.getElementById("title-item").innerText = "What Item? (料號)";
-          document.getElementById("title-qty").innerText = "How Many? (數量)";
-          document.getElementById("title-lot").innerText = "From Bin (原儲位)";
-          document.getElementById("title-bin").innerText = "To Bin (新儲位)";
-          scanLabel.innerText = "第一步：請掃描要移位的商品條碼 (What Item?)";
-          input.placeholder = "請掃描準備移位的 Item 條碼...";
-        } else if (sysMode === "QUALITY") {
-          currentScanState = "ITEM";
-          document.getElementById("title-item").innerText = "What Item? (料號)";
-          document.getElementById("title-qty").innerText = "How Many? (數量)";
-          document.getElementById("title-lot").innerText =
-            "QA Status (品檢狀態)";
-          scanLabel.innerText =
-            "請掃描商品條碼進行 QA 狀態切換 (Available ↔ Hold)";
-          input.placeholder = "掃描 Item 條碼以凍結或放行...";
-        }
-        if (sysMode !== "DASHBOARD") input.focus();
-      }
-
+      // 模式切換邏輯
       function switchMode(mode) {
         sysMode = mode;
         document
           .querySelectorAll(".menu-item")
           .forEach((el) => el.classList.remove("active"));
-        document
-          .getElementById("scanner-area")
-          .classList.remove("mode-outbound", "mode-inventory", "mode-quality");
+        dashboardArea.style.display = "none";
+        operationArea.style.display = "none";
+        adminArea.style.display = "none";
         const headerTitle = document.getElementById("header-title");
 
         if (mode === "DASHBOARD") {
           document.getElementById("menu-dashboard").classList.add("active");
           dashboardArea.style.display = "block";
-          operationArea.style.display = "none";
           headerTitle.innerHTML = "📊 Dashboard: 系統戰情室";
           headerTitle.style.color = "#2c3e50";
           loadDashboardData();
+        } else if (mode === "ADMIN") {
+          document.getElementById("menu-admin").classList.add("active");
+          adminArea.style.display = "block";
+          headerTitle.innerHTML = "⚙️ Admin: 後台資料建檔";
+          headerTitle.style.color = "#2c3e50";
+          if (roleSelect.value !== "admin") {
+            alert("提示：請確保您擁有系統管理員權限以執行建檔操作。");
+            roleSelect.value = "admin";
+          }
         } else {
-          dashboardArea.style.display = "none";
           operationArea.style.display = "block";
-          resetUI();
+          document
+            .querySelectorAll(".card-value")
+            .forEach((el) => (el.innerText = "--"));
+          document.getElementById("val-bin").style.color =
+            "var(--primary-color)";
+          input.value = "";
+          input.classList.remove("state-item", "state-bin");
+          document
+            .getElementById("scanner-area")
+            .classList.remove(
+              "mode-outbound",
+              "mode-inventory",
+              "mode-quality",
+            );
 
           if (mode === "INBOUND") {
             document.getElementById("menu-inbound").classList.add("active");
             headerTitle.innerHTML = "📥 Inbound: Receiving & Put Away";
             headerTitle.style.color = "#2c3e50";
+            currentScanState = "ORDER";
+            scanLabel.innerText = "第一步：請掃描採購單號 (Which PO?)";
+            input.placeholder = "請掃描 PO 條碼...";
+            document.getElementById("title-item").innerText =
+              "What Item? (應收料號)";
+            document.getElementById("title-qty").innerText =
+              "Progress (收貨進度)";
+            document.getElementById("title-lot").innerText =
+              "Which PO? (採購單號)";
           } else if (mode === "OUTBOUND") {
             document.getElementById("menu-outbound").classList.add("active");
             document
@@ -516,6 +573,15 @@
               .classList.add("mode-outbound");
             headerTitle.innerHTML = "📤 Outbound: Picking (訂單揀貨)";
             headerTitle.style.color = "#3498db";
+            currentScanState = "ORDER";
+            scanLabel.innerText = "第一步：請掃描銷貨單號 (Which SO?)";
+            input.placeholder = "請掃描 SO 條碼...";
+            document.getElementById("title-item").innerText =
+              "What Item? (應揀料號)";
+            document.getElementById("title-qty").innerText =
+              "Progress (揀貨進度)";
+            document.getElementById("title-lot").innerText =
+              "Which SO? (銷貨單號)";
           } else if (mode === "INVENTORY") {
             document.getElementById("menu-inventory").classList.add("active");
             document
@@ -523,6 +589,15 @@
               .classList.add("mode-inventory");
             headerTitle.innerHTML = "🏢 Inventory: Bin Transfer (儲位轉移)";
             headerTitle.style.color = "#8e44ad";
+            currentScanState = "ITEM";
+            scanLabel.innerText = "第一步：請掃描要移位的商品條碼";
+            input.placeholder = "請掃描準備移位的 Item 條碼...";
+            document.getElementById("title-item").innerText =
+              "What Item? (料號)";
+            document.getElementById("title-qty").innerText = "How Many? (數量)";
+            document.getElementById("title-lot").innerText =
+              "From Bin (原儲位)";
+            document.getElementById("title-bin").innerText = "To Bin (新儲位)";
           } else if (mode === "QUALITY") {
             document.getElementById("menu-quality").classList.add("active");
             document
@@ -530,13 +605,25 @@
               .classList.add("mode-quality");
             headerTitle.innerHTML = "🔍 Quality: Inspection (品質狀態檢驗)";
             headerTitle.style.color = "#16a085";
+            currentScanState = "ITEM";
+            scanLabel.innerText = "請掃描商品條碼進行 QA 狀態切換";
+            input.placeholder = "掃描 Item 條碼以凍結或放行...";
+            document.getElementById("title-item").innerText =
+              "What Item? (料號)";
+            document.getElementById("title-qty").innerText = "How Many? (數量)";
+            document.getElementById("title-lot").innerText =
+              "QA Status (品檢狀態)";
           }
+          input.focus();
         }
       }
 
       document
         .getElementById("menu-dashboard")
         .addEventListener("click", () => switchMode("DASHBOARD"));
+      document
+        .getElementById("menu-admin")
+        .addEventListener("click", () => switchMode("ADMIN"));
       document
         .getElementById("menu-inbound")
         .addEventListener("click", () => switchMode("INBOUND"));
@@ -550,11 +637,56 @@
         .getElementById("menu-quality")
         .addEventListener("click", () => switchMode("QUALITY"));
       roleSelect.addEventListener("change", () => {
-        if (sysMode !== "DASHBOARD") input.focus();
+        if (sysMode !== "DASHBOARD" && sysMode !== "ADMIN") input.focus();
       });
 
       // ==========================================
-      // 核心作業邏輯 (與上一版完全相同，無更動)
+      // Admin 表單提交流程 (setDoc)
+      // ==========================================
+      document
+        .getElementById("btn-submit-order")
+        .addEventListener("click", async () => {
+          const type = document.getElementById("admin-order-type").value;
+          const orderNo = document
+            .getElementById("admin-order-no")
+            .value.trim();
+          const itemCode = document
+            .getElementById("admin-item-code")
+            .value.trim();
+          const qty = parseInt(document.getElementById("admin-qty").value);
+
+          if (!orderNo || !itemCode || !qty) {
+            alert("請完整填寫單據號碼、商品條碼與數量！");
+            return;
+          }
+
+          try {
+            // 使用 setDoc 將單據直接寫入 Orders 集合，文件 ID 為手動輸入的 orderNo
+            await setDoc(doc(db, "Orders", orderNo), {
+              order_type: type,
+              status: "Open",
+              item_code: itemCode,
+              expected_qty: qty,
+              received_qty: 0,
+              picked_qty: 0,
+            });
+
+            alert(
+              `✅ 單據 ${orderNo} 建立成功！\n您可以切換至 Inbound 或 Outbound 進行掃描測試。`,
+            );
+
+            // 清空輸入框
+            document.getElementById("admin-order-no").value = "";
+            document.getElementById("admin-item-code").value = "";
+            document.getElementById("admin-qty").value = "";
+          } catch (error) {
+            console.error("單據建立失敗:", error);
+            alert("建立失敗，請檢查網路連線或 Firebase 權限設定。");
+          }
+        });
+
+      // ==========================================
+      // 核心作業邏輯 (與前版相同)
       // ==========================================
       input.addEventListener("keypress", async function (e) {
         if (e.key === "Enter") {
@@ -632,7 +764,7 @@
                 logTable.insertBefore(tr, logTable.firstChild);
                 if (processedQty >= expectedQty) {
                   alert(`🎉 銷貨單 ${activeOrder} 揀貨完畢。`);
-                  resetUI();
+                  switchMode("OUTBOUND");
                 } else {
                   document.getElementById("val-qty").innerText =
                     `${processedQty} / ${expectedQty}`;
@@ -710,7 +842,7 @@
               logTable.insertBefore(tr, logTable.firstChild);
               if (processedQty >= expectedQty) {
                 alert(`🎉 採購單 ${activeOrder} 已收貨完畢。`);
-                resetUI();
+                switchMode("INBOUND");
               } else {
                 currentScanState = "ITEM";
                 input.classList.remove("state-bin");
@@ -748,8 +880,7 @@
                 to_bin: barcode,
                 timestamp: serverTimestamp(),
               });
-              resetUI();
-              scanLabel.innerText = "第一步：請掃描要移位的商品條碼";
+              switchMode("INVENTORY");
             }
           } else if (sysMode === "QUALITY") {
             if (roleSelect.value !== "qa") {
@@ -788,7 +919,6 @@
         }
       });
 
-      // 初始載入戰情室
       switchMode("DASHBOARD");
     </script>
   </body>
