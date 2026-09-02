@@ -280,7 +280,6 @@
       </div>
 
       <div class="workspace">
-        <!-- 儀表板區塊 -->
         <div id="dashboard-area">
           <div
             class="info-cards"
@@ -329,7 +328,6 @@
           </table>
         </div>
 
-        <!-- 作業掃描區塊 -->
         <div id="operation-area" style="display: none">
           <div class="scan-panel" id="scanner-area">
             <label id="scan-label" style="font-weight: bold; color: #333"
@@ -376,7 +374,6 @@
           </table>
         </div>
 
-        <!-- Admin 後台建檔區塊 -->
         <div id="admin-area" style="display: none">
           <div
             class="card admin-form"
@@ -436,11 +433,13 @@
             </button>
           </div>
           <table>
+            <!-- 在表頭新增了「目前儲位」欄位 -->
             <thead>
               <tr>
                 <th>單號</th>
                 <th>類型</th>
                 <th>商品條碼</th>
+                <th>目前儲位</th>
                 <th>進度 (已處理/預計)</th>
                 <th>狀態</th>
                 <th>操作</th>
@@ -500,9 +499,7 @@
       let pendingItemDesc = "";
       let pendingFromBin = "";
 
-      // ==========================================
-      // Excel 報表匯出邏輯 (使用 SheetJS)
-      // ==========================================
+      // Excel 匯出邏輯
       document
         .getElementById("btn-export-logs")
         .addEventListener("click", async () => {
@@ -510,7 +507,6 @@
           btn.innerText = "資料產出中...";
           btn.disabled = true;
           try {
-            // 撈取所有 ScanLogs 紀錄 (按時間排序)
             const logsSnap = await getDocs(
               query(collection(db, "ScanLogs"), orderBy("timestamp", "desc")),
             );
@@ -532,8 +528,6 @@
                 狀態備註: data.new_status || "成功",
               });
             });
-
-            // 轉為 Sheet 並下載
             const ws = XLSX.utils.json_to_sheet(exportData);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "作業紀錄總表");
@@ -552,20 +546,30 @@
           btn.innerText = "資料產出中...";
           btn.disabled = true;
           try {
-            // 撈取所有 Orders 單據
             const ordersSnap = await getDocs(collection(db, "Orders"));
             const exportData = [];
-            ordersSnap.forEach((doc) => {
-              const data = doc.data();
+
+            // 改用 for...of 迴圈確保 await 查詢儲位依序完成
+            for (const docSnap of ordersSnap.docs) {
+              const data = docSnap.data();
               const processed =
                 data.order_type === "PO"
                   ? data.received_qty || 0
                   : data.picked_qty || 0;
               const expected = data.expected_qty || 0;
+
+              let currentBin = "未分配";
+              if (data.item_code) {
+                const itemSnap = await getDoc(doc(db, "Items", data.item_code));
+                if (itemSnap.exists())
+                  currentBin = itemSnap.data().default_bin || "未分配";
+              }
+
               exportData.push({
-                單據號碼: doc.id,
+                單據號碼: docSnap.id,
                 單據類型: data.order_type,
                 商品條碼: data.item_code,
+                目前儲位: currentBin,
                 預計數量: expected,
                 已處理數量: processed,
                 執行進度: `${Math.round((processed / expected) * 100)}%`,
@@ -576,7 +580,7 @@
                       ? "執行中"
                       : "未處理",
               });
-            });
+            }
 
             const ws = XLSX.utils.json_to_sheet(exportData);
             const wb = XLSX.utils.book_new();
@@ -589,7 +593,7 @@
           btn.disabled = false;
         });
 
-      // 儀表板與其餘邏輯維持不變
+      // 儀表板與 Admin 清單載入
       async function loadDashboardData() {
         try {
           const ordersSnap = await getDocs(collection(db, "Orders"));
@@ -644,11 +648,13 @@
 
       async function loadAdminOrders() {
         const tbody = document.getElementById("admin-orders-table");
-        tbody.innerHTML = '<tr><td colspan="6">載入中...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7">載入中...</td></tr>';
         try {
           const ordersSnap = await getDocs(collection(db, "Orders"));
           tbody.innerHTML = "";
-          ordersSnap.forEach((docSnap) => {
+
+          // 改用 for...of 迴圈以支援非同步 getDoc 查詢儲位
+          for (const docSnap of ordersSnap.docs) {
             const data = docSnap.data();
             const id = docSnap.id;
             const processed =
@@ -656,6 +662,17 @@
                 ? data.received_qty || 0
                 : data.picked_qty || 0;
             const expected = data.expected_qty || 0;
+
+            // 關聯查詢：透過單據內的商品條碼，查詢 Items 集合取得最新儲位
+            let currentBin = "--";
+            if (data.item_code) {
+              const itemSnap = await getDoc(doc(db, "Items", data.item_code));
+              if (itemSnap.exists()) {
+                currentBin = itemSnap.data().default_bin || "未分配";
+              } else {
+                currentBin = "查無料號";
+              }
+            }
 
             let statusBadge = `<span class="status-badge bg-yellow">未處理</span>`;
             if (processed >= expected)
@@ -665,14 +682,19 @@
 
             const tr = document.createElement("tr");
             tr.innerHTML = `
-                        <td><strong>${id}</strong></td><td>${data.order_type}</td><td>${data.item_code}</td><td>${processed} / ${expected}</td><td>${statusBadge}</td>
+                        <td><strong>${id}</strong></td>
+                        <td>${data.order_type}</td>
+                        <td>${data.item_code}</td>
+                        <td style="color:#e74c3c; font-weight:bold;">${currentBin}</td>
+                        <td>${processed} / ${expected}</td>
+                        <td>${statusBadge}</td>
                         <td>
                             <button class="btn-action btn-edit" onclick="window.editAdminOrder('${id}', '${data.order_type}', '${data.item_code}', ${expected})">編輯</button>
                             <button class="btn-action btn-delete" onclick="window.deleteAdminOrder('${id}', ${processed})">刪除</button>
                         </td>
                     `;
             tbody.appendChild(tr);
-          });
+          }
         } catch (error) {
           console.error("單據載入失敗", error);
         }
