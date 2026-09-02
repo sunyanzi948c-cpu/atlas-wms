@@ -1298,7 +1298,7 @@
         .getElementById("menu-quality")
         .addEventListener("click", () => switchMode("QUALITY"));
 
-      // 現場作業核心邏輯 (加入 批號 Lot 攔截機制)
+      // 現場作業核心邏輯 (加入 批號 Lot 攔截機制 與 新商品防呆)
       input.addEventListener("keypress", async function (e) {
         if (e.key === "Enter") {
           e.preventDefault();
@@ -1363,6 +1363,12 @@
                 input.classList.add("state-lot");
                 scanLabel.innerText = "第三步：請掃描包裝上的「批號 / 爐號」";
                 input.placeholder = `請掃描 Lot / Heat 條碼...`;
+              } else {
+                // 修正：補上防呆警告，若商品從未進貨過則阻擋出貨
+                input.value = "";
+                return alert(
+                  "🚨 系統查無此商品主檔！\n原因：此料號從未進行過 Inbound 進貨入庫，現場無庫存可出貨。",
+                );
               }
             } else if (currentScanState === "LOT") {
               // 批號攔截：如果單據有強制要求指定批號，且掃描不符，則阻擋
@@ -1447,6 +1453,13 @@
                 input.value = "";
                 return alert(`🚨 收貨錯誤！單據要求 ${expectedItem}`);
               }
+
+              // 修正：狀態推進不再包在 itemSnap.exists() 裡面，讓新舊商品都能往下刷批號
+              const itemSnap = await getDoc(doc(db, "Items", barcode));
+              document.getElementById("val-bin").innerText = itemSnap.exists()
+                ? `建議: ${itemSnap.data().default_bin || "--"}`
+                : `建議: 無 (新商品)`;
+
               currentScanState = "LOT";
               input.classList.remove("state-item");
               input.classList.add("state-lot");
@@ -1462,9 +1475,6 @@
               scannedLot = barcode;
               document.getElementById("val-lot-heat").innerText =
                 `已刷入: ${scannedLot}`;
-              const itemSnap = await getDoc(doc(db, "Items", expectedItem));
-              document.getElementById("val-bin").innerText =
-                `建議: ${itemSnap.exists() ? itemSnap.data().default_bin || "--" : "--"}`;
 
               currentScanState = "BIN";
               input.classList.remove("state-lot");
@@ -1485,9 +1495,14 @@
                 operator: currentUser.name,
                 timestamp: serverTimestamp(),
               });
-              await updateDoc(doc(db, "Items", expectedItem), {
-                default_bin: barcode,
-              });
+
+              // 修正：改用 setDoc + merge，確保全新商品也能成功建立主檔資料
+              await setDoc(
+                doc(db, "Items", expectedItem),
+                { default_bin: barcode },
+                { merge: true },
+              );
+
               processedQty += 1;
               await updateDoc(doc(db, "Orders", activeOrder), {
                 received_qty: processedQty,
