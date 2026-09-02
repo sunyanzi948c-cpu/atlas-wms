@@ -9,7 +9,6 @@
         :root { --primary-color: #2c3e50; --secondary-color: #e74c3c; --bg-color: #f4f7f6; --sidebar-width: 250px; }
         body { margin: 0; font-family: 'Segoe UI', Tahoma, sans-serif; background-color: var(--bg-color); height: 100vh; overflow: hidden; display: flex; }
         
-        /* 登入畫面專屬樣式 */
         #login-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #2c3e50; display: flex; justify-content: center; align-items: center; z-index: 9999; }
         .login-box { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 100%; max-width: 400px; text-align: center; }
         .login-box h1 { color: #e74c3c; margin-top: 0; margin-bottom: 5px; font-weight: 900; letter-spacing: 2px; }
@@ -19,7 +18,6 @@
         .btn-login { width: 100%; padding: 15px; background: #3498db; color: white; border: none; border-radius: 6px; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.3s; }
         .btn-login:hover { background: #2980b9; }
 
-        /* 主畫面版面 */
         #app-layout { display: none; width: 100vw; height: 100vh; flex-direction: row; }
         .sidebar { width: var(--sidebar-width); background-color: var(--primary-color); color: white; display: flex; flex-direction: column; }
         .sidebar h2 { text-align: center; padding: 20px 0; margin: 0; background-color: #1a252f; color: var(--secondary-color); font-weight: 900; letter-spacing: 2px; }
@@ -31,7 +29,6 @@
         .user-profile { display: flex; align-items: center; gap: 15px; font-weight: bold; color: #2c3e50; }
         .workspace { padding: 30px; overflow-y: auto; flex: 1; }
         
-        /* 表單與卡片 (沿用) */
         .scan-panel { background: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; border-left: 5px solid var(--secondary-color); transition: 0.3s; }
         .scan-input { width: 100%; padding: 15px; font-size: 24px; border: 2px solid #bdc3c7; border-radius: 6px; box-sizing: border-box; margin-top: 10px; }
         .scan-input:focus { outline: none; border-color: var(--secondary-color); }
@@ -60,7 +57,6 @@
     </style>
 </head>
 <body>
-    <!-- 登入牆 -->
     <div id="login-screen">
         <div class="login-box">
             <h1>ATLAS WMS</h1>
@@ -71,7 +67,6 @@
         </div>
     </div>
 
-    <!-- 主系統架構 -->
     <div id="app-layout">
         <div class="sidebar">
             <h2>ATLAS WMS</h2>
@@ -86,7 +81,6 @@
         <div class="main-content">
             <div class="topbar">
                 <h3 id="header-title" style="margin:0; color: #2c3e50;">📊 Dashboard: 系統戰情室</h3>
-                <!-- 替換掉原本的下拉選單，改為真實使用者資訊 -->
                 <div class="user-profile">
                     <span id="display-user-name">載入中...</span>
                     <span id="display-user-role" class="status-badge bg-blue">Role</span>
@@ -95,7 +89,6 @@
             </div>
 
             <div class="workspace">
-                <!-- 儀表板 -->
                 <div id="dashboard-area">
                     <div class="info-cards" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 30px;">
                         <div class="card" style="border-top: 5px solid #27ae60;"><div class="card-title">📥 採購單 (PO) 達成率</div><div class="card-value" id="dash-po">計算中...</div></div>
@@ -109,7 +102,6 @@
                     <table><thead><tr><th>時間</th><th>人員</th><th>動作</th><th>操作細節</th></tr></thead><tbody id="dash-log-table"></tbody></table>
                 </div>
 
-                <!-- 現場作業掃描區塊 -->
                 <div id="operation-area" style="display: none;">
                     <div class="scan-panel" id="scanner-area">
                         <label id="scan-label" style="font-weight: bold; color: #333;">第一步：請掃描</label>
@@ -125,21 +117,28 @@
                     <table><thead><tr><th>時間</th><th>動作</th><th>單據與明細</th><th>狀態</th></tr></thead><tbody id="transaction-log"></tbody></table>
                 </div>
 
-                <!-- Admin 後台 -->
                 <div id="admin-area" style="display: none;">
                     <div class="admin-grid">
-                        <!-- 單據管理區塊 -->
                         <div class="card admin-form" style="text-align: left; margin-bottom: 30px;">
                             <h3 id="admin-form-title" style="margin-top: 0; color: #2c3e50; border-bottom: 2px solid #ecf0f1; padding-bottom: 10px;">📄 建立/編輯 單據</h3>
-                            <label>單據類型：</label><select id="admin-order-type"><option value="PO">📥 採購單 (PO)</option><option value="SO">📤 銷貨單 (SO)</option></select>
-                            <label>單據號碼：</label><input type="text" id="admin-order-no" placeholder="如 PO-20261001...">
-                            <label>商品條碼：</label><input type="text" id="admin-item-code" placeholder="輸入商品條碼...">
-                            <label>預計數量：</label><input type="number" id="admin-qty" placeholder="輸入數量..." min="1">
+                            <label>單據類型：</label>
+                            <select id="admin-order-type">
+                                <option value="PO">📥 採購單 (PO)</option>
+                                <option value="SO">📤 銷貨單 (SO)</option>
+                            </select>
+                            <label>單據號碼 (系統自動產生)：</label>
+                            <!-- 加上 readonly 與預設背景色，提示使用者這是自動產生的 -->
+                            <input type="text" id="admin-order-no" placeholder="序號生成中..." readonly style="background-color: #ecf0f1; font-weight: bold; color: #2980b9;">
+                            
+                            <label>商品條碼 (Item Code)：</label>
+                            <input type="text" id="admin-item-code" placeholder="輸入商品條碼...">
+                            <label>預計處理數量 (Expected Qty)：</label>
+                            <input type="number" id="admin-qty" placeholder="輸入數量..." min="1">
+                            
                             <button id="btn-submit-order" class="btn-submit">儲存單據</button>
                             <button id="btn-cancel-edit" class="btn-submit" style="background:#7f8c8d; display:none; margin-top:10px;">取消編輯</button>
                         </div>
 
-                        <!-- ⭐️ 全新：使用者帳號管理區塊 -->
                         <div class="card admin-form" style="text-align: left; margin-bottom: 30px; background: #fafafa; border: 2px dashed #bdc3c7;">
                             <h3 id="admin-user-title" style="margin-top: 0; color: #8e44ad; border-bottom: 2px solid #ecf0f1; padding-bottom: 10px;">👥 建立/編輯 使用者帳號</h3>
                             <label>員工帳號 (登入用)：</label><input type="text" id="admin-user-acc" placeholder="如 tony01...">
@@ -156,7 +155,6 @@
                         </div>
                     </div>
 
-                    <!-- 使用者清單 -->
                     <div class="section-header">
                         <h4 style="color: #8e44ad; margin: 0;">📋 系統帳號清單</h4>
                     </div>
@@ -165,7 +163,6 @@
                         <tbody id="admin-users-table"></tbody>
                     </table>
 
-                    <!-- 單據清單 -->
                     <div class="section-header">
                         <h4 style="color: #7f8c8d; margin: 0;">📋 單據管理清單</h4>
                         <button id="btn-export-orders" class="btn-submit btn-export">📥 匯出單據表</button>
@@ -190,195 +187,122 @@
         const input = document.getElementById('barcodeInput');
         const scanLabel = document.getElementById('scan-label');
         const logTable = document.getElementById('transaction-log');
-        
-        // 全域變數：儲存目前登入的使用者資訊
         let currentUser = null; 
-        
-        let sysMode = 'DASHBOARD'; 
-        let currentScanState = 'ORDER'; 
-        let activeOrder = ''; let expectedItem = ''; let expectedQty = 0; let processedQty = 0;
-        let pendingItemCode = ''; let pendingItemDesc = ''; let pendingFromBin = '';
+        let sysMode = 'DASHBOARD'; let currentScanState = 'ORDER'; let activeOrder = ''; let expectedItem = ''; let expectedQty = 0; let processedQty = 0; let pendingItemCode = ''; let pendingItemDesc = ''; let pendingFromBin = '';
 
-        // ==========================================
-        // 核心一：登入驗證與動態權限 (RBAC)
-        // ==========================================
+        // 登入驗證
         document.getElementById('btn-login').addEventListener('click', async () => {
-            const acc = document.getElementById('login-acc').value.trim();
-            const pwd = document.getElementById('login-pwd').value.trim();
+            const acc = document.getElementById('login-acc').value.trim(); const pwd = document.getElementById('login-pwd').value.trim();
             if (!acc || !pwd) return alert("請輸入帳號與密碼！");
-
-            const btn = document.getElementById('btn-login');
-            btn.innerText = "驗證中..."; btn.disabled = true;
-
+            const btn = document.getElementById('btn-login'); btn.innerText = "驗證中..."; btn.disabled = true;
             try {
-                // 查詢 Users 資料表
-                const userRef = doc(db, "Users", acc);
-                const userSnap = await getDoc(userRef);
-
-                // 防呆：如果是第一次使用 (找不到 admin 帳號)，自動建立並登入
+                const userRef = doc(db, "Users", acc); const userSnap = await getDoc(userRef);
                 if (!userSnap.exists() && acc === 'admin' && pwd === 'admin123') {
                     await setDoc(userRef, { account: 'admin', password: 'admin123', name: '首長管理員', role: 'admin' });
                     currentUser = { account: 'admin', name: '首長管理員', role: 'admin' };
-                } 
-                else if (userSnap.exists() && userSnap.data().password === pwd) {
-                    currentUser = userSnap.data();
-                } else {
-                    alert("帳號或密碼錯誤，請重新輸入！");
-                    btn.innerText = "安全登入"; btn.disabled = false;
-                    return;
-                }
+                } else if (userSnap.exists() && userSnap.data().password === pwd) { currentUser = userSnap.data(); } 
+                else { alert("帳號或密碼錯誤！"); btn.innerText = "安全登入"; btn.disabled = false; return; }
 
-                // 登入成功：更新 UI 權限與版面
-                document.getElementById('login-screen').style.display = 'none';
-                document.getElementById('app-layout').style.display = 'flex';
-                
+                document.getElementById('login-screen').style.display = 'none'; document.getElementById('app-layout').style.display = 'flex';
                 document.getElementById('display-user-name').innerText = `👤 ${currentUser.name}`;
                 
                 let roleName = "系統管理員"; let roleColor = "bg-purple";
-                if(currentUser.role === 'warehouse') { roleName = "倉管人員"; roleColor = "bg-blue"; }
-                else if(currentUser.role === 'qa') { roleName = "品保人員"; roleColor = "bg-red"; }
-                
-                const roleBadge = document.getElementById('display-user-role');
-                roleBadge.innerText = roleName;
-                roleBadge.className = `status-badge ${roleColor}`;
+                if(currentUser.role === 'warehouse') { roleName = "倉管人員"; roleColor = "bg-blue"; } else if(currentUser.role === 'qa') { roleName = "品保人員"; roleColor = "bg-red"; }
+                const roleBadge = document.getElementById('display-user-role'); roleBadge.innerText = roleName; roleBadge.className = `status-badge ${roleColor}`;
 
-                applyRoleRestrictions(currentUser.role);
-                switchMode('DASHBOARD');
-
-            } catch(e) { alert("登入發生異常：" + e); btn.innerText = "安全登入"; btn.disabled = false; }
+                applyRoleRestrictions(currentUser.role); switchMode('DASHBOARD');
+            } catch(e) { alert("登入異常：" + e); btn.innerText = "安全登入"; btn.disabled = false; }
         });
 
-        document.getElementById('btn-logout').addEventListener('click', () => {
-            currentUser = null;
-            document.getElementById('app-layout').style.display = 'none';
-            document.getElementById('login-screen').style.display = 'flex';
-            document.getElementById('login-pwd').value = '';
-            document.getElementById('btn-login').innerText = "安全登入";
-            document.getElementById('btn-login').disabled = false;
-        });
+        document.getElementById('btn-logout').addEventListener('click', () => { currentUser = null; document.getElementById('app-layout').style.display = 'none'; document.getElementById('login-screen').style.display = 'flex'; document.getElementById('login-pwd').value = ''; document.getElementById('btn-login').innerText = "安全登入"; document.getElementById('btn-login').disabled = false; });
 
-        // 動態權限選單顯示控制
         function applyRoleRestrictions(role) {
-            const menuInbound = document.getElementById('menu-inbound');
-            const menuOutbound = document.getElementById('menu-outbound');
-            const menuInventory = document.getElementById('menu-inventory');
-            const menuQuality = document.getElementById('menu-quality');
-            const menuAdmin = document.getElementById('menu-admin');
-
-            // 先全部隱藏
-            menuInbound.style.display = 'none'; menuOutbound.style.display = 'none';
-            menuInventory.style.display = 'none'; menuQuality.style.display = 'none';
-            menuAdmin.style.display = 'none';
-
-            if (role === 'admin') {
-                // Admin 看全部
-                menuInbound.style.display = 'block'; menuOutbound.style.display = 'block';
-                menuInventory.style.display = 'block'; menuQuality.style.display = 'block';
-                menuAdmin.style.display = 'block';
-            } else if (role === 'warehouse') {
-                // 倉管 看收發移
-                menuInbound.style.display = 'block'; menuOutbound.style.display = 'block'; menuInventory.style.display = 'block';
-            } else if (role === 'qa') {
-                // 品保 看看板與品檢
-                menuQuality.style.display = 'block';
-            }
+            const menus = ['menu-inbound', 'menu-outbound', 'menu-inventory', 'menu-quality', 'menu-admin'];
+            menus.forEach(m => document.getElementById(m).style.display = 'none');
+            if (role === 'admin') menus.forEach(m => document.getElementById(m).style.display = 'block');
+            else if (role === 'warehouse') ['menu-inbound', 'menu-outbound', 'menu-inventory'].forEach(m => document.getElementById(m).style.display = 'block');
+            else if (role === 'qa') ['menu-quality'].forEach(m => document.getElementById(m).style.display = 'block');
         }
 
         // ==========================================
-        // 核心二：Admin 使用者帳號 CRUD 管理
+        // 單據自動流水號產生器邏輯
         // ==========================================
-        async function loadAdminUsers() {
-            const tbody = document.getElementById('admin-users-table');
-            tbody.innerHTML = '<tr><td colspan="5">載入中...</td></tr>';
-            try {
-                const usersSnap = await getDocs(collection(db, "Users"));
-                tbody.innerHTML = '';
-                usersSnap.forEach(docSnap => {
-                    const data = docSnap.data();
-                    let roleStr = "未知"; let roleClass = "bg-gray";
-                    if(data.role === 'admin') { roleStr = "系統管理員"; roleClass = "bg-purple"; }
-                    else if(data.role === 'warehouse') { roleStr = "倉管人員"; roleClass = "bg-blue"; }
-                    else if(data.role === 'qa') { roleStr = "品保人員"; roleClass = "bg-red"; }
+        async function generateOrderNo() {
+            // 若目前處於「編輯舊單據」模式，則不執行自動生成
+            if (document.getElementById('btn-cancel-edit').style.display === 'block') return;
 
+            const type = document.getElementById('admin-order-type').value;
+            const today = new Date();
+            // 轉換為 YYYYMMDD 格式 (例如: 20260902)
+            const dateStr = today.getFullYear() + String(today.getMonth() + 1).padStart(2, '0') + String(today.getDate()).padStart(2, '0');
+            const prefix = `${type}-${dateStr}-`;
+            
+            const inputNo = document.getElementById('admin-order-no');
+            inputNo.value = '序號生成中...';
+
+            try {
+                // 撈取同一類型 (PO/SO) 的所有單據
+                const q = query(collection(db, "Orders"), where("order_type", "==", type));
+                const snap = await getDocs(q);
+                
+                let maxSeq = 0;
+                snap.forEach(doc => {
+                    // 比對單號字首是否符合今天的日期前綴
+                    if (doc.id.startsWith(prefix)) {
+                        // 切割取得最後面的流水號數字 (例如 PO-20260902-005 -> 取得 5)
+                        const seq = parseInt(doc.id.split('-')[2]);
+                        if (seq > maxSeq) maxSeq = seq;
+                    }
+                });
+                
+                // 找到最大值後 + 1，並補齊 3 位數零 (如 001, 002)
+                const nextSeqStr = String(maxSeq + 1).padStart(3, '0');
+                inputNo.value = `${prefix}${nextSeqStr}`;
+                
+            } catch(e) {
+                console.error("流水號生成失敗:", e);
+                inputNo.value = '生成失敗，請手動輸入';
+                inputNo.readOnly = false;
+            }
+        }
+
+        // 當單據類型 (PO/SO) 改變時，重新計算流水號
+        document.getElementById('admin-order-type').addEventListener('change', generateOrderNo);
+
+        // 使用者帳號 CRUD
+        async function loadAdminUsers() {
+            const tbody = document.getElementById('admin-users-table'); tbody.innerHTML = '<tr><td colspan="5">載入中...</td></tr>';
+            try {
+                const usersSnap = await getDocs(collection(db, "Users")); tbody.innerHTML = '';
+                usersSnap.forEach(docSnap => {
+                    const data = docSnap.data(); let roleStr = "未知"; let roleClass = "bg-gray";
+                    if(data.role === 'admin') { roleStr = "系統管理員"; roleClass = "bg-purple"; } else if(data.role === 'warehouse') { roleStr = "倉管人員"; roleClass = "bg-blue"; } else if(data.role === 'qa') { roleStr = "品保人員"; roleClass = "bg-red"; }
                     const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td><strong>${data.account}</strong></td><td>${data.name}</td><td>***</td>
-                        <td><span class="status-badge ${roleClass}">${roleStr}</span></td>
-                        <td>
-                            <button class="btn-action btn-edit" onclick="window.editAdminUser('${data.account}', '${data.name}', '${data.role}', '${data.password}')">編輯</button>
-                            <button class="btn-action btn-delete" onclick="window.deleteAdminUser('${data.account}')">刪除</button>
-                        </td>
-                    `;
+                    tr.innerHTML = `<td><strong>${data.account}</strong></td><td>${data.name}</td><td>***</td><td><span class="status-badge ${roleClass}">${roleStr}</span></td>
+                        <td><button class="btn-action btn-edit" onclick="window.editAdminUser('${data.account}', '${data.name}', '${data.role}', '${data.password}')">編輯</button> <button class="btn-action btn-delete" onclick="window.deleteAdminUser('${data.account}')">刪除</button></td>`;
                     tbody.appendChild(tr);
                 });
-            } catch(e) { console.error(e); }
+            } catch(e) {}
         }
-
-        window.editAdminUser = (acc, name, role, pwd) => {
-            document.getElementById('admin-user-title').innerText = `✏️ 編輯帳號：${acc}`;
-            document.getElementById('admin-user-acc').value = acc;
-            document.getElementById('admin-user-acc').disabled = true; // 帳號為主鍵不可改
-            document.getElementById('admin-user-pwd').value = pwd;
-            document.getElementById('admin-user-name').value = name;
-            document.getElementById('admin-user-role').value = role;
-            document.getElementById('btn-cancel-user').style.display = 'block';
-        };
-
-        window.deleteAdminUser = async (acc) => {
-            if (acc === 'admin' || acc === currentUser.account) {
-                return alert("🚨 拒絕刪除！您不能刪除 Root 帳號或您自己目前的登入帳號。");
-            }
-            if (confirm(`確定要刪除員工帳號 ${acc} 嗎？`)) {
-                await deleteDoc(doc(db, "Users", acc));
-                loadAdminUsers();
-            }
-        };
-
-        document.getElementById('btn-cancel-user').addEventListener('click', () => {
-            document.getElementById('admin-user-title').innerText = '👥 建立/編輯 使用者帳號';
-            document.getElementById('admin-user-acc').disabled = false;
-            document.getElementById('admin-user-acc').value = ''; document.getElementById('admin-user-pwd').value = ''; document.getElementById('admin-user-name').value = '';
-            document.getElementById('btn-cancel-user').style.display = 'none';
-        });
-
+        window.editAdminUser = (acc, name, role, pwd) => { document.getElementById('admin-user-title').innerText = `✏️ 編輯帳號：${acc}`; document.getElementById('admin-user-acc').value = acc; document.getElementById('admin-user-acc').disabled = true; document.getElementById('admin-user-pwd').value = pwd; document.getElementById('admin-user-name').value = name; document.getElementById('admin-user-role').value = role; document.getElementById('btn-cancel-user').style.display = 'block'; };
+        window.deleteAdminUser = async (acc) => { if (acc === 'admin' || acc === currentUser.account) return alert("🚨 拒絕刪除！不能刪除 Root 或目前的登入帳號。"); if (confirm(`確定刪除 ${acc}？`)) { await deleteDoc(doc(db, "Users", acc)); loadAdminUsers(); } };
+        document.getElementById('btn-cancel-user').addEventListener('click', () => { document.getElementById('admin-user-title').innerText = '👥 建立/編輯 使用者帳號'; document.getElementById('admin-user-acc').disabled = false; document.getElementById('admin-user-acc').value = ''; document.getElementById('admin-user-pwd').value = ''; document.getElementById('admin-user-name').value = ''; document.getElementById('btn-cancel-user').style.display = 'none'; });
         document.getElementById('btn-submit-user').addEventListener('click', async () => {
-            const acc = document.getElementById('admin-user-acc').value.trim();
-            const pwd = document.getElementById('admin-user-pwd').value.trim();
-            const name = document.getElementById('admin-user-name').value.trim();
-            const role = document.getElementById('admin-user-role').value;
-
-            if (!acc || !pwd || !name) return alert("請完整填寫帳號、密碼與姓名！");
-
-            try {
-                await setDoc(doc(db, "Users", acc), { account: acc, password: pwd, name: name, role: role });
-                alert(`✅ 帳號 ${acc} 儲存成功！`);
-                document.getElementById('btn-cancel-user').click(); // 重置表單
-                loadAdminUsers();
-            } catch (error) { console.error(error); alert("儲存失敗"); }
+            const acc = document.getElementById('admin-user-acc').value.trim(); const pwd = document.getElementById('admin-user-pwd').value.trim(); const name = document.getElementById('admin-user-name').value.trim(); const role = document.getElementById('admin-user-role').value;
+            if (!acc || !pwd || !name) return alert("請完整填寫！");
+            try { await setDoc(doc(db, "Users", acc), { account: acc, password: pwd, name: name, role: role }); alert(`✅ 帳號儲存成功！`); document.getElementById('btn-cancel-user').click(); loadAdminUsers(); } catch (error) { alert("儲存失敗"); }
         });
 
-
-        // ==========================================
-        // 原有模組：儀表板、單據CRUD、Excel 與 現場掃描
-        // ==========================================
-        // (此區塊邏輯保持不變，但在寫入 Log 時加上操作人員姓名)
-        
+        // 儀表板與單據 CRUD
         async function loadDashboardData() {
             try {
-                const ordersSnap = await getDocs(collection(db, "Orders"));
-                let poTotal = 0, poDone = 0, soTotal = 0, soDone = 0;
+                const ordersSnap = await getDocs(collection(db, "Orders")); let poTotal = 0, poDone = 0, soTotal = 0, soDone = 0;
                 ordersSnap.forEach(doc => { const data = doc.data(); if (data.order_type === 'PO') { poTotal += (data.expected_qty || 0); poDone += (data.received_qty || 0); } else if (data.order_type === 'SO') { soTotal += (data.expected_qty || 0); soDone += (data.picked_qty || 0); }});
-                document.getElementById('dash-po').innerText = poTotal > 0 ? `${Math.round((poDone/poTotal)*100)}% (${poDone}/${poTotal})` : '尚無單據';
-                document.getElementById('dash-so').innerText = soTotal > 0 ? `${Math.round((soDone/soTotal)*100)}% (${soDone}/${soTotal})` : '尚無單據';
-                document.getElementById('dash-hold').innerText = `${(await getDocs(query(collection(db, "Items"), where("quality_status", "==", "Hold")))).size} 項商品`;
-
+                document.getElementById('dash-po').innerText = poTotal > 0 ? `${Math.round((poDone/poTotal)*100)}% (${poDone}/${poTotal})` : '尚無單據'; document.getElementById('dash-so').innerText = soTotal > 0 ? `${Math.round((soDone/soTotal)*100)}% (${soDone}/${soTotal})` : '尚無單據'; document.getElementById('dash-hold').innerText = `${(await getDocs(query(collection(db, "Items"), where("quality_status", "==", "Hold")))).size} 項商品`;
                 const dashLogTable = document.getElementById('dash-log-table'); dashLogTable.innerHTML = '';
                 (await getDocs(query(collection(db, "ScanLogs"), orderBy("timestamp", "desc"), limit(5)))).forEach(doc => {
-                    const log = doc.data();
-                    const timeStr = log.timestamp ? `${log.timestamp.toDate().getHours().toString().padStart(2, '0')}:${log.timestamp.toDate().getMinutes().toString().padStart(2, '0')}` : '剛剛';
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `<td>${timeStr}</td><td>${log.operator || '系統'}</td><td><strong style="color:#2c3e50;">${log.action.replace('_', ' ')}</strong></td><td>${log.scanned_item || log.order_no || '-'}</td>`;
-                    dashLogTable.appendChild(tr);
+                    const log = doc.data(); const timeStr = log.timestamp ? `${log.timestamp.toDate().getHours().toString().padStart(2, '0')}:${log.timestamp.toDate().getMinutes().toString().padStart(2, '0')}` : '剛剛';
+                    const tr = document.createElement('tr'); tr.innerHTML = `<td>${timeStr}</td><td>${log.operator || '系統'}</td><td><strong style="color:#2c3e50;">${log.action.replace('_', ' ')}</strong></td><td>${log.scanned_item || log.order_no || '-'}</td>`; dashLogTable.appendChild(tr);
                 });
             } catch (e) {}
         }
@@ -388,94 +312,55 @@
             try {
                 const ordersSnap = await getDocs(collection(db, "Orders")); tbody.innerHTML = '';
                 for (const docSnap of ordersSnap.docs) {
-                    const data = docSnap.data(); const id = docSnap.id;
-                    const processed = data.order_type === 'PO' ? (data.received_qty || 0) : (data.picked_qty || 0); const expected = data.expected_qty || 0;
+                    const data = docSnap.data(); const id = docSnap.id; const processed = data.order_type === 'PO' ? (data.received_qty || 0) : (data.picked_qty || 0); const expected = data.expected_qty || 0;
                     let currentBin = '--'; if (data.item_code) { const itemSnap = await getDoc(doc(db, "Items", data.item_code)); if (itemSnap.exists()) { currentBin = itemSnap.data().default_bin || '未分配'; } else { currentBin = '查無料號'; } }
                     let statusBadge = `<span class="status-badge bg-yellow">未處理</span>`; if (processed >= expected) statusBadge = `<span class="status-badge bg-green">已結案</span>`; else if (processed > 0) statusBadge = `<span class="status-badge bg-blue">執行中</span>`;
                     const tr = document.createElement('tr');
                     tr.innerHTML = `<td><strong>${id}</strong></td><td>${data.order_type}</td><td>${data.item_code}</td><td style="color:#e74c3c; font-weight:bold;">${currentBin}</td><td>${processed} / ${expected}</td><td>${statusBadge}</td>
-                        <td><button class="btn-action btn-edit" onclick="window.editAdminOrder('${id}', '${data.order_type}', '${data.item_code}', ${expected})">編輯</button> <button class="btn-action btn-delete" onclick="window.deleteAdminOrder('${id}', ${processed})">刪除</button></td>`;
-                    tbody.appendChild(tr);
+                        <td><button class="btn-action btn-edit" onclick="window.editAdminOrder('${id}', '${data.order_type}', '${data.item_code}', ${expected})">編輯</button> <button class="btn-action btn-delete" onclick="window.deleteAdminOrder('${id}', ${processed})">刪除</button></td>`; tbody.appendChild(tr);
                 }
             } catch(e) {}
         }
-
-        window.editAdminOrder = (id, type, itemCode, expectedQty) => {
-            document.getElementById('admin-form-title').innerText = `✏️ 編輯單據：${id}`; document.getElementById('admin-order-type').value = type; document.getElementById('admin-order-no').value = id; document.getElementById('admin-order-no').disabled = true; document.getElementById('admin-item-code').value = itemCode; document.getElementById('admin-qty').value = expectedQty; document.getElementById('btn-cancel-edit').style.display = 'block'; window.scrollTo({ top: 0, behavior: 'smooth' });
-        };
-
-        window.deleteAdminOrder = async (id, processedQty) => {
-            if (processedQty > 0) return alert(`🚨 拒絕刪除！單據現場已產生作業進度。`);
-            if (confirm(`確定刪除單據 ${id}？`)) { await deleteDoc(doc(db, "Orders", id)); loadAdminOrders(); }
-        };
-
-        document.getElementById('btn-cancel-edit').addEventListener('click', () => {
-            document.getElementById('admin-form-title').innerText = '📄 建立/編輯 單據'; document.getElementById('admin-order-no').disabled = false;
-            document.getElementById('admin-order-no').value = ''; document.getElementById('admin-item-code').value = ''; document.getElementById('admin-qty').value = ''; document.getElementById('btn-cancel-edit').style.display = 'none';
-        });
+        window.editAdminOrder = (id, type, itemCode, expectedQty) => { document.getElementById('admin-form-title').innerText = `✏️ 編輯單據：${id}`; document.getElementById('admin-order-type').value = type; document.getElementById('admin-order-no').value = id; document.getElementById('admin-item-code').value = itemCode; document.getElementById('admin-qty').value = expectedQty; document.getElementById('btn-cancel-edit').style.display = 'block'; window.scrollTo({ top: 0, behavior: 'smooth' }); };
+        window.deleteAdminOrder = async (id, processedQty) => { if (processedQty > 0) return alert(`🚨 拒絕刪除！現場已產生作業進度。`); if (confirm(`確定刪除單據 ${id}？`)) { await deleteDoc(doc(db, "Orders", id)); loadAdminOrders(); } };
+        document.getElementById('btn-cancel-edit').addEventListener('click', () => { document.getElementById('admin-form-title').innerText = '📄 建立/編輯 單據'; document.getElementById('admin-order-no').value = ''; document.getElementById('admin-item-code').value = ''; document.getElementById('admin-qty').value = ''; document.getElementById('btn-cancel-edit').style.display = 'none'; generateOrderNo(); });
 
         document.getElementById('btn-submit-order').addEventListener('click', async () => {
             const type = document.getElementById('admin-order-type').value; const orderNo = document.getElementById('admin-order-no').value.trim(); const itemCode = document.getElementById('admin-item-code').value.trim(); const qty = parseInt(document.getElementById('admin-qty').value);
-            if (!orderNo || !itemCode || !qty) return alert("請完整填寫！");
+            if (!orderNo || !itemCode || !qty || orderNo === '序號生成中...' || orderNo === '生成失敗，請手動輸入') return alert("請完整填寫或等待序號生成！");
             try {
                 const orderRef = doc(db, "Orders", orderNo); const orderSnap = await getDoc(orderRef);
                 if (orderSnap.exists()) {
                     const data = orderSnap.data(); const processed = data.order_type === 'PO' ? (data.received_qty || 0) : (data.picked_qty || 0);
-                    if (processed > 0 && data.item_code !== itemCode) return alert(`🚨 拒絕修改！禁止變更料號。`);
-                    if (qty < processed) return alert(`🚨 數量異常！不可低於已處理量。`);
+                    if (processed > 0 && data.item_code !== itemCode) return alert(`🚨 拒絕修改！禁止變更料號。`); if (qty < processed) return alert(`🚨 數量異常！不可低於已處理量。`);
                     await updateDoc(orderRef, { order_type: type, item_code: itemCode, expected_qty: qty }); alert(`✅ 修改成功！`);
-                } else { await setDoc(orderRef, { order_type: type, status: "Open", item_code: itemCode, expected_qty: qty, received_qty: 0, picked_qty: 0 }); alert(`✅ 建立成功！`); }
+                } else { await setDoc(orderRef, { order_type: type, status: "Open", item_code: itemCode, expected_qty: qty, received_qty: 0, picked_qty: 0 }); alert(`✅ 單號 ${orderNo} 建立成功！`); }
                 document.getElementById('btn-cancel-edit').click(); loadAdminOrders();
             } catch (e) {}
         });
 
         // 匯出 Excel
-        document.getElementById('btn-export-logs').addEventListener('click', async () => {
-            try {
-                const logsSnap = await getDocs(query(collection(db, "ScanLogs"), orderBy("timestamp", "desc"))); const exportData = [];
-                logsSnap.forEach(doc => { const data = doc.data(); exportData.push({ "作業時間": data.timestamp ? data.timestamp.toDate().toLocaleString('zh-TW', {hour12:false}) : '', "操作人員": data.operator || '系統', "動作類型": data.action, "關聯單號": data.order_no || '無', "商品條碼": data.scanned_item || '無', "來源儲位": data.from_bin || '無', "目標儲位": data.to_bin || data.actual_bin || '無', "狀態": data.new_status || '成功' }); });
-                XLSX.writeFile(XLSX.utils.book_append_sheet(XLSX.utils.book_new(), XLSX.utils.json_to_sheet(exportData), "作業紀錄總表"), `WMS作業紀錄_${new Date().getTime()}.xlsx`);
-            } catch (err) {}
-        });
-        document.getElementById('btn-export-orders').addEventListener('click', async () => {
-            try {
-                const ordersSnap = await getDocs(collection(db, "Orders")); const exportData = [];
-                for (const docSnap of ordersSnap.docs) {
-                    const data = docSnap.data(); const processed = data.order_type === 'PO' ? (data.received_qty || 0) : (data.picked_qty || 0); const expected = data.expected_qty || 0;
-                    let currentBin = '未分配'; if (data.item_code) { const itemSnap = await getDoc(doc(db, "Items", data.item_code)); if (itemSnap.exists()) currentBin = itemSnap.data().default_bin || '未分配'; }
-                    exportData.push({ "單據號碼": docSnap.id, "類型": data.order_type, "商品條碼": data.item_code, "目前儲位": currentBin, "預計數量": expected, "已處理": processed, "進度": `${Math.round((processed/expected)*100)}%`, "狀態": processed >= expected ? "已結案" : (processed > 0 ? "執行中" : "未處理") });
-                }
-                XLSX.writeFile(XLSX.utils.book_append_sheet(XLSX.utils.book_new(), XLSX.utils.json_to_sheet(exportData), "單據總表"), `WMS單據總表_${new Date().getTime()}.xlsx`);
-            } catch (err) {}
-        });
+        document.getElementById('btn-export-logs').addEventListener('click', async () => { try { const logsSnap = await getDocs(query(collection(db, "ScanLogs"), orderBy("timestamp", "desc"))); const exportData = []; logsSnap.forEach(doc => { const data = doc.data(); exportData.push({ "作業時間": data.timestamp ? data.timestamp.toDate().toLocaleString('zh-TW', {hour12:false}) : '', "操作人員": data.operator || '系統', "動作類型": data.action, "關聯單號": data.order_no || '無', "商品條碼": data.scanned_item || '無', "來源儲位": data.from_bin || '無', "目標儲位": data.to_bin || data.actual_bin || '無', "狀態": data.new_status || '成功' }); }); XLSX.writeFile(XLSX.utils.book_append_sheet(XLSX.utils.book_new(), XLSX.utils.json_to_sheet(exportData), "作業紀錄總表"), `WMS作業紀錄_${new Date().getTime()}.xlsx`); } catch (err) {} });
+        document.getElementById('btn-export-orders').addEventListener('click', async () => { try { const ordersSnap = await getDocs(collection(db, "Orders")); const exportData = []; for (const docSnap of ordersSnap.docs) { const data = docSnap.data(); const processed = data.order_type === 'PO' ? (data.received_qty || 0) : (data.picked_qty || 0); const expected = data.expected_qty || 0; let currentBin = '未分配'; if (data.item_code) { const itemSnap = await getDoc(doc(db, "Items", data.item_code)); if (itemSnap.exists()) currentBin = itemSnap.data().default_bin || '未分配'; } exportData.push({ "單據號碼": docSnap.id, "類型": data.order_type, "商品條碼": data.item_code, "目前儲位": currentBin, "預計數量": expected, "已處理": processed, "進度": `${Math.round((processed/expected)*100)}%`, "狀態": processed >= expected ? "已結案" : (processed > 0 ? "執行中" : "未處理") }); } XLSX.writeFile(XLSX.utils.book_append_sheet(XLSX.utils.book_new(), XLSX.utils.json_to_sheet(exportData), "單據總表"), `WMS單據總表_${new Date().getTime()}.xlsx`); } catch (err) {} });
 
         // 介面切換
         function switchMode(mode) {
-            sysMode = mode;
-            document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+            sysMode = mode; document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
             document.getElementById('dashboard-area').style.display = 'none'; document.getElementById('operation-area').style.display = 'none'; document.getElementById('admin-area').style.display = 'none';
             const headerTitle = document.getElementById('header-title');
 
-            if (mode === 'DASHBOARD') {
-                document.getElementById('menu-dashboard').classList.add('active'); document.getElementById('dashboard-area').style.display = 'block';
-                headerTitle.innerHTML = '📊 Dashboard: 系統戰情室'; headerTitle.style.color = '#2c3e50'; loadDashboardData();
-            } else if (mode === 'ADMIN') {
-                document.getElementById('menu-admin').classList.add('active'); document.getElementById('admin-area').style.display = 'block';
-                headerTitle.innerHTML = '⚙️ Admin: 後台管理'; headerTitle.style.color = '#2c3e50'; loadAdminOrders(); loadAdminUsers();
-            } else {
-                document.getElementById('operation-area').style.display = 'block';
-                document.querySelectorAll('.card-value').forEach(el => el.innerText = '--'); document.getElementById('val-bin').style.color = 'var(--primary-color)';
-                input.value = ''; input.classList.remove('state-item', 'state-bin'); document.getElementById('scanner-area').classList.remove('mode-outbound', 'mode-inventory', 'mode-quality');
-                
-                if (mode === 'INBOUND') {
-                    document.getElementById('menu-inbound').classList.add('active'); headerTitle.innerHTML = '📥 Inbound: Receiving & Put Away'; headerTitle.style.color = '#2c3e50'; currentScanState = 'ORDER'; scanLabel.innerText = "第一步：請掃描採購單號 (PO)"; input.placeholder = "請掃描 PO 條碼..."; document.getElementById('title-item').innerText = "應收料號"; document.getElementById('title-qty').innerText = "收貨進度"; document.getElementById('title-lot').innerText = "採購單號";
-                } else if (mode === 'OUTBOUND') {
-                    document.getElementById('menu-outbound').classList.add('active'); document.getElementById('scanner-area').classList.add('mode-outbound'); headerTitle.innerHTML = '📤 Outbound: Picking'; headerTitle.style.color = '#3498db'; currentScanState = 'ORDER'; scanLabel.innerText = "第一步：請掃描銷貨單號 (SO)"; input.placeholder = "請掃描 SO 條碼..."; document.getElementById('title-item').innerText = "應揀料號"; document.getElementById('title-qty').innerText = "揀貨進度"; document.getElementById('title-lot').innerText = "銷貨單號";
-                } else if (mode === 'INVENTORY') {
-                    document.getElementById('menu-inventory').classList.add('active'); document.getElementById('scanner-area').classList.add('mode-inventory'); headerTitle.innerHTML = '🏢 Inventory: Bin Transfer'; headerTitle.style.color = '#8e44ad'; currentScanState = 'ITEM'; scanLabel.innerText = "第一步：請掃描要移位的商品"; input.placeholder = "請掃描 Item 條碼..."; document.getElementById('title-item').innerText = "料號"; document.getElementById('title-qty').innerText = "數量"; document.getElementById('title-lot').innerText = "原儲位"; document.getElementById('title-bin').innerText = "新儲位";
-                } else if (mode === 'QUALITY') {
-                    document.getElementById('menu-quality').classList.add('active'); document.getElementById('scanner-area').classList.add('mode-quality'); headerTitle.innerHTML = '🔍 Quality: Inspection'; headerTitle.style.color = '#16a085'; currentScanState = 'ITEM'; scanLabel.innerText = "請掃描商品條碼變更 QA 狀態"; input.placeholder = "掃描 Item 條碼以凍結或放行..."; document.getElementById('title-item').innerText = "料號"; document.getElementById('title-qty').innerText = "數量"; document.getElementById('title-lot').innerText = "QA 狀態";
-                }
+            if (mode === 'DASHBOARD') { document.getElementById('menu-dashboard').classList.add('active'); document.getElementById('dashboard-area').style.display = 'block'; headerTitle.innerHTML = '📊 Dashboard: 系統戰情室'; headerTitle.style.color = '#2c3e50'; loadDashboardData(); } 
+            else if (mode === 'ADMIN') { 
+                document.getElementById('menu-admin').classList.add('active'); document.getElementById('admin-area').style.display = 'block'; headerTitle.innerHTML = '⚙️ Admin: 後台管理'; headerTitle.style.color = '#2c3e50'; 
+                loadAdminOrders(); loadAdminUsers(); 
+                generateOrderNo(); // 進入 Admin 畫面時，自動觸發流水號生成
+            } 
+            else {
+                document.getElementById('operation-area').style.display = 'block'; document.querySelectorAll('.card-value').forEach(el => el.innerText = '--'); document.getElementById('val-bin').style.color = 'var(--primary-color)'; input.value = ''; input.classList.remove('state-item', 'state-bin'); document.getElementById('scanner-area').classList.remove('mode-outbound', 'mode-inventory', 'mode-quality');
+                if (mode === 'INBOUND') { document.getElementById('menu-inbound').classList.add('active'); headerTitle.innerHTML = '📥 Inbound: Receiving & Put Away'; headerTitle.style.color = '#2c3e50'; currentScanState = 'ORDER'; scanLabel.innerText = "第一步：請掃描採購單號 (PO)"; input.placeholder = "請掃描 PO 條碼..."; document.getElementById('title-item').innerText = "應收料號"; document.getElementById('title-qty').innerText = "收貨進度"; document.getElementById('title-lot').innerText = "採購單號"; } 
+                else if (mode === 'OUTBOUND') { document.getElementById('menu-outbound').classList.add('active'); document.getElementById('scanner-area').classList.add('mode-outbound'); headerTitle.innerHTML = '📤 Outbound: Picking'; headerTitle.style.color = '#3498db'; currentScanState = 'ORDER'; scanLabel.innerText = "第一步：請掃描銷貨單號 (SO)"; input.placeholder = "請掃描 SO 條碼..."; document.getElementById('title-item').innerText = "應揀料號"; document.getElementById('title-qty').innerText = "揀貨進度"; document.getElementById('title-lot').innerText = "銷貨單號"; } 
+                else if (mode === 'INVENTORY') { document.getElementById('menu-inventory').classList.add('active'); document.getElementById('scanner-area').classList.add('mode-inventory'); headerTitle.innerHTML = '🏢 Inventory: Bin Transfer'; headerTitle.style.color = '#8e44ad'; currentScanState = 'ITEM'; scanLabel.innerText = "第一步：請掃描要移位的商品"; input.placeholder = "請掃描 Item 條碼..."; document.getElementById('title-item').innerText = "料號"; document.getElementById('title-qty').innerText = "數量"; document.getElementById('title-lot').innerText = "原儲位"; document.getElementById('title-bin').innerText = "新儲位"; } 
+                else if (mode === 'QUALITY') { document.getElementById('menu-quality').classList.add('active'); document.getElementById('scanner-area').classList.add('mode-quality'); headerTitle.innerHTML = '🔍 Quality: Inspection'; headerTitle.style.color = '#16a085'; currentScanState = 'ITEM'; scanLabel.innerText = "請掃描商品條碼變更 QA 狀態"; input.placeholder = "掃描 Item 條碼以凍結或放行..."; document.getElementById('title-item').innerText = "料號"; document.getElementById('title-qty').innerText = "數量"; document.getElementById('title-lot').innerText = "QA 狀態"; }
                 input.focus();
             }
         }
@@ -486,7 +371,7 @@
         document.getElementById('menu-inventory').addEventListener('click', () => switchMode('INVENTORY'));
         document.getElementById('menu-quality').addEventListener('click', () => switchMode('QUALITY'));
         
-        // 掃描事件 (寫入時附帶 operator: currentUser.name)
+        // 掃描事件
         input.addEventListener('keypress', async function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault(); const barcode = e.target.value.trim(); if (barcode === "") return;
