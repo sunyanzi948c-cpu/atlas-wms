@@ -984,14 +984,23 @@
                 : data.picked_qty || 0;
             const expected = data.expected_qty || 0;
             let currentBin = "--";
-            if (data.item_code) {
-              const itemSnap = await getDoc(doc(db, "Items", data.item_code));
-              if (itemSnap.exists()) {
-                currentBin = itemSnap.data().default_bin || "未分配";
-              } else {
-                currentBin = "查無料號";
+
+            // 加上嚴格防呆：確保 item_code 有值才去查詢
+            if (data.item_code && data.item_code.trim() !== "") {
+              try {
+                const itemSnap = await getDoc(doc(db, "Items", data.item_code));
+                if (itemSnap.exists()) {
+                  currentBin = itemSnap.data().default_bin || "未分配";
+                } else {
+                  currentBin = "查無料號";
+                }
+              } catch (err) {
+                currentBin = "查詢異常";
               }
+            } else {
+              currentBin = "無商品條碼";
             }
+
             let statusBadge = `<span class="status-badge bg-yellow">未處理</span>`;
             if (processed >= expected)
               statusBadge = `<span class="status-badge bg-green">已結案</span>`;
@@ -1002,12 +1011,17 @@
               : "無限制";
 
             const tr = document.createElement("tr");
-            tr.innerHTML = `<td><strong>${id}</strong></td><td>${data.order_type}</td><td>${data.item_code}</td><td>${lotDisplay}</td><td style="color:#e74c3c; font-weight:bold;">${currentBin}</td><td>${processed} / ${expected}</td><td>${statusBadge}</td>
-                        <td><button class="btn-action btn-edit" onclick="window.editAdminOrder('${id}', '${data.order_type}', '${data.item_code}', '${data.lot_number || ""}', ${expected})">編輯</button> <button class="btn-action btn-delete" onclick="window.deleteAdminOrder('${id}', ${processed})">刪除</button></td>`;
+            tr.innerHTML = `<td><strong>${id}</strong></td><td>${data.order_type}</td><td>${data.item_code || "-"}</td><td>${lotDisplay}</td><td style="color:#e74c3c; font-weight:bold;">${currentBin}</td><td>${processed} / ${expected}</td><td>${statusBadge}</td>
+                        <td><button class="btn-action btn-edit" onclick="window.editAdminOrder('${id}', '${data.order_type}', '${data.item_code || ""}', '${data.lot_number || ""}', ${expected})">編輯</button> <button class="btn-action btn-delete" onclick="window.deleteAdminOrder('${id}', ${processed})">刪除</button></td>`;
             tbody.appendChild(tr);
           }
-        } catch (e) {}
+        } catch (e) {
+          console.error("載入單據清單發生異常:", e);
+          tbody.innerHTML =
+            '<tr><td colspan="8" style="color:red;">資料載入異常，請檢查控制台。</td></tr>';
+        }
       }
+
       window.editAdminOrder = (id, type, itemCode, lotCode, expectedQty) => {
         document.getElementById("admin-form-title").innerText =
           `✏️ 編輯單據：${id}`;
@@ -1150,15 +1164,24 @@
                   : data.picked_qty || 0;
               const expected = data.expected_qty || 0;
               let currentBin = "未分配";
-              if (data.item_code) {
-                const itemSnap = await getDoc(doc(db, "Items", data.item_code));
-                if (itemSnap.exists())
-                  currentBin = itemSnap.data().default_bin || "未分配";
+
+              // 加上嚴格防呆：確保 item_code 有值才去查詢，避免系統崩潰
+              if (data.item_code && data.item_code.trim() !== "") {
+                try {
+                  const itemSnap = await getDoc(
+                    doc(db, "Items", data.item_code),
+                  );
+                  if (itemSnap.exists())
+                    currentBin = itemSnap.data().default_bin || "未分配";
+                } catch (err) {
+                  console.warn("查詢儲位失敗:", data.item_code);
+                }
               }
+
               exportData.push({
                 單據號碼: docSnap.id,
                 類型: data.order_type,
-                商品條碼: data.item_code,
+                商品條碼: data.item_code || "無資料",
                 批號: data.lot_number || "無限制",
                 目前儲位: currentBin,
                 預計數量: expected,
@@ -1180,7 +1203,10 @@
               ),
               `WMS單據總表_${new Date().getTime()}.xlsx`,
             );
-          } catch (err) {}
+          } catch (err) {
+            alert("匯出發生異常，請檢查控制台。");
+            console.error(err);
+          }
         });
 
       // 介面切換 (新增清除批號卡片)
