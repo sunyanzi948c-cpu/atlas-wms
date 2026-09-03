@@ -1118,6 +1118,7 @@
         });
 
       // 匯出 Excel (新增批號欄位)
+      // 匯出 Excel (新增批號欄位)
       document
         .getElementById("btn-export-logs")
         .addEventListener("click", async () => {
@@ -1144,16 +1145,18 @@
                 狀態: data.new_status || "成功",
               });
             });
-            XLSX.writeFile(
-              XLSX.utils.book_append_sheet(
-                XLSX.utils.book_new(),
-                XLSX.utils.json_to_sheet(exportData),
-                "作業紀錄總表",
-              ),
-              `WMS作業紀錄_${new Date().getTime()}.xlsx`,
-            );
-          } catch (err) {}
+
+            // 修正：拆分回正確的 Excel 產生步驟
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "作業紀錄總表");
+            XLSX.writeFile(wb, `WMS作業紀錄_${new Date().getTime()}.xlsx`);
+          } catch (err) {
+            alert("匯出紀錄發生異常，請檢查控制台。");
+            console.error(err);
+          }
         });
+
       document
         .getElementById("btn-export-orders")
         .addEventListener("click", async () => {
@@ -1201,16 +1204,14 @@
                       : "未處理",
               });
             }
-            XLSX.writeFile(
-              XLSX.utils.book_append_sheet(
-                XLSX.utils.book_new(),
-                XLSX.utils.json_to_sheet(exportData),
-                "單據總表",
-              ),
-              `WMS單據總表_${new Date().getTime()}.xlsx`,
-            );
+
+            // 修正：拆分回正確的 Excel 產生步驟
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "單據總表");
+            XLSX.writeFile(wb, `WMS單據總表_${new Date().getTime()}.xlsx`);
           } catch (err) {
-            alert("匯出發生異常，請檢查控制台。");
+            alert("匯出單據發生異常，請檢查控制台。");
             console.error(err);
           }
         });
