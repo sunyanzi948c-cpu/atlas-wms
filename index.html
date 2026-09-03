@@ -967,9 +967,12 @@
             )
           ).forEach((doc) => {
             const log = doc.data();
-            const timeStr = log.timestamp
-              ? `${log.timestamp.toDate().getHours().toString().padStart(2, "0")}:${log.timestamp.toDate().getMinutes().toString().padStart(2, "0")}`
-              : "剛剛";
+
+            let timeStr = "剛剛";
+            if (log.timestamp) {
+              const d = log.timestamp.toDate();
+              timeStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}:${String(d.getSeconds()).padStart(2, "0")}`;
+            }
 
             const partialTag = log.is_partial
               ? ' <span style="color:#e74c3c; font-weight:bold;">(尾箱)</span>'
@@ -1392,10 +1395,8 @@
           e.preventDefault();
           const barcode = e.target.value.trim();
           if (barcode === "") return;
-          const timeStr =
-            new Date().getHours().toString().padStart(2, "0") +
-            ":" +
-            new Date().getMinutes().toString().padStart(2, "0");
+          const now = new Date();
+          const timeStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
 
           // ----------------------------------------------------
           // OUTBOUND (揀貨流程)
