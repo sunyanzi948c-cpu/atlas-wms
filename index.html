@@ -140,6 +140,7 @@
       .workspace {
         padding: 30px;
         overflow-y: auto;
+        overflow-x: auto; /* 新增：當內容太寬時允許橫向捲動 */
         flex: 1;
       }
 
@@ -230,6 +231,7 @@
         padding: 12px 15px;
         text-align: left;
         border-bottom: 1px solid #eee;
+        white-space: nowrap; /* 新增：強制文字與按鈕保持在同一行 */
       }
       th {
         background-color: #f8f9fa;
