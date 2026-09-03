@@ -175,7 +175,7 @@
         border-left-color: #16a085;
       }
 
-      /* 新增 LOT 狀態顏色 */
+      /* LOT 狀態顏色 */
       .scan-input.state-item {
         border-color: #3498db !important;
         background-color: #ebf5fb;
@@ -214,6 +214,7 @@
         margin-top: 10px;
         font-weight: 900;
         word-break: break-all;
+        white-space: pre-line; /* 支援換行顯示箱數 */
       }
 
       table {
@@ -429,7 +430,7 @@
                   <th>時間</th>
                   <th>人員</th>
                   <th>動作</th>
-                  <th>操作明細 (料號 / 批號 / 儲位)</th>
+                  <th>操作明細 (料號 / 批號 / 儲位 / 數量)</th>
                 </tr>
               </thead>
               <tbody id="dash-log-table"></tbody>
@@ -448,7 +449,6 @@
                 placeholder="請掃描條碼..."
                 autocomplete="off" />
 
-              <!-- 擴充卡片：加入 Which Lot? 區塊 -->
               <div class="info-cards">
                 <div class="card">
                   <div class="card-title" id="title-order">
@@ -477,7 +477,9 @@
                   </div>
                 </div>
                 <div class="card">
-                  <div class="card-title" id="title-qty">Progress (進度)</div>
+                  <div class="card-title" id="title-qty">
+                    Progress (EA / 箱數)
+                  </div>
                   <div class="card-value" id="val-qty">--</div>
                 </div>
                 <div class="card">
@@ -540,18 +542,25 @@
                   id="admin-item-code"
                   placeholder="輸入商品條碼..." />
 
-                <!-- 新增：批號/爐號欄位 -->
                 <label>批號 / 爐號 (Lot / Heat)：</label>
                 <input
                   type="text"
                   id="admin-lot-code"
                   placeholder="如 B2630797Y1 (選填)..." />
 
-                <label>預計處理數量 (Expected Qty)：</label>
+                <!-- 新增：單箱標準數量 -->
+                <label style="color: #d35400">📦 單箱標準數量 (EA/CTN)：</label>
+                <input
+                  type="number"
+                  id="admin-qty-per-ctn"
+                  placeholder="如 330 (代表一箱330件)"
+                  min="1" />
+
+                <label>預計處理總數量 (Total Expected EA)：</label>
                 <input
                   type="number"
                   id="admin-qty"
-                  placeholder="輸入數量..."
+                  placeholder="輸入總數量 EA..."
                   min="1" />
 
                 <button id="btn-submit-order" class="btn-submit">
@@ -642,7 +651,6 @@
               </button>
             </div>
             <table>
-              <!-- 新增批號顯示欄位 -->
               <thead>
                 <tr>
                   <th>單號</th>
@@ -650,6 +658,7 @@
                   <th>商品條碼</th>
                   <th>指定批號</th>
                   <th>目前儲位</th>
+                  <th>EA/CTN</th>
                   <th>進度</th>
                   <th>狀態</th>
                   <th>操作</th>
@@ -703,9 +712,10 @@
       let expectedItem = "";
       let expectedQty = 0;
       let processedQty = 0;
-      let expectedLot = ""; // 新增：用於記錄單據指定的批號
-      let scannedLot = ""; // 新增：用於記錄現場掃描抓到的批號
+      let expectedLot = "";
+      let scannedLot = "";
       let pendingItemCode = "";
+      let currentQtyPerCtn = 1; // 記錄目前掃描商品的單箱標準數量
 
       // 登入驗證
       document
@@ -960,7 +970,13 @@
             const timeStr = log.timestamp
               ? `${log.timestamp.toDate().getHours().toString().padStart(2, "0")}:${log.timestamp.toDate().getMinutes().toString().padStart(2, "0")}`
               : "剛剛";
-            const detail = `${log.order_no ? `單號:${log.order_no} ` : ""} 料號:${log.scanned_item || "-"} 批號:${log.lot_number || "-"} 儲位:${log.to_bin || log.actual_bin || log.from_bin || "-"}`;
+
+            const partialTag = log.is_partial
+              ? ' <span style="color:#e74c3c; font-weight:bold;">(尾箱)</span>'
+              : "";
+            const qtyStr = log.qty ? `數量:${log.qty} EA${partialTag}` : "";
+            const detail = `${log.order_no ? `單號:${log.order_no} ` : ""} 料號:${log.scanned_item || "-"} 批號:${log.lot_number || "-"} 儲位:${log.to_bin || log.actual_bin || log.from_bin || "-"} ${qtyStr}`;
+
             const tr = document.createElement("tr");
             tr.innerHTML = `<td>${timeStr}</td><td>${log.operator || "系統"}</td><td><strong style="color:#2c3e50;">${log.action.replace("_", " ")}</strong></td><td><small>${detail}</small></td>`;
             dashLogTable.appendChild(tr);
@@ -968,10 +984,10 @@
         } catch (e) {}
       }
 
-      // 單據管理CRUD (含 Lot 欄位)
+      // 單據管理CRUD (安全保護與 Lot 欄位)
       async function loadAdminOrders() {
         const tbody = document.getElementById("admin-orders-table");
-        tbody.innerHTML = '<tr><td colspan="8">載入中...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9">載入中...</td></tr>';
         try {
           const ordersSnap = await getDocs(collection(db, "Orders"));
           tbody.innerHTML = "";
@@ -984,6 +1000,7 @@
                 : data.picked_qty || 0;
             const expected = data.expected_qty || 0;
             let currentBin = "--";
+            let ctnQty = 1;
 
             // 終極防呆：確保 item_code 存在，且轉為字串後再 trim
             const safeItemCode = data.item_code
@@ -995,6 +1012,7 @@
                 const itemSnap = await getDoc(doc(db, "Items", safeItemCode));
                 if (itemSnap.exists()) {
                   currentBin = itemSnap.data().default_bin || "未分配";
+                  ctnQty = itemSnap.data().qty_per_ctn || 1;
                 } else {
                   currentBin = "查無料號";
                 }
@@ -1010,23 +1028,32 @@
               statusBadge = `<span class="status-badge bg-green">已結案</span>`;
             else if (processed > 0)
               statusBadge = `<span class="status-badge bg-blue">執行中</span>`;
+
             const lotDisplay = data.lot_number
               ? `<span style="color:#8e44ad; font-weight:bold;">${data.lot_number}</span>`
               : "無限制";
+            const ctnDisplay = `<span style="color:#d35400;">${ctnQty}</span>`;
 
             const tr = document.createElement("tr");
-            tr.innerHTML = `<td><strong>${id}</strong></td><td>${data.order_type}</td><td>${safeItemCode || "-"}</td><td>${lotDisplay}</td><td style="color:#e74c3c; font-weight:bold;">${currentBin}</td><td>${processed} / ${expected}</td><td>${statusBadge}</td>
-                        <td><button class="btn-action btn-edit" onclick="window.editAdminOrder('${id}', '${data.order_type}', '${safeItemCode}', '${data.lot_number || ""}', ${expected})">編輯</button> <button class="btn-action btn-delete" onclick="window.deleteAdminOrder('${id}', ${processed})">刪除</button></td>`;
+            tr.innerHTML = `<td><strong>${id}</strong></td><td>${data.order_type}</td><td>${safeItemCode || "-"}</td><td>${lotDisplay}</td><td style="color:#e74c3c; font-weight:bold;">${currentBin}</td><td>${ctnDisplay}</td><td>${processed} / ${expected}</td><td>${statusBadge}</td>
+                        <td><button class="btn-action btn-edit" onclick="window.editAdminOrder('${id}', '${data.order_type}', '${safeItemCode}', '${data.lot_number || ""}', ${expected}, ${ctnQty})">編輯</button> <button class="btn-action btn-delete" onclick="window.deleteAdminOrder('${id}', ${processed})">刪除</button></td>`;
             tbody.appendChild(tr);
           }
         } catch (e) {
           console.error("載入單據清單發生異常:", e);
           tbody.innerHTML =
-            '<tr><td colspan="8" style="color:red;">資料載入異常，請檢查控制台。</td></tr>';
+            '<tr><td colspan="9" style="color:red;">資料載入異常，請檢查控制台。</td></tr>';
         }
       }
 
-      window.editAdminOrder = (id, type, itemCode, lotCode, expectedQty) => {
+      window.editAdminOrder = (
+        id,
+        type,
+        itemCode,
+        lotCode,
+        expectedQty,
+        ctnQty,
+      ) => {
         document.getElementById("admin-form-title").innerText =
           `✏️ 編輯單據：${id}`;
         document.getElementById("admin-order-type").value = type;
@@ -1035,9 +1062,11 @@
         document.getElementById("admin-item-code").value = itemCode;
         document.getElementById("admin-lot-code").value = lotCode;
         document.getElementById("admin-qty").value = expectedQty;
+        document.getElementById("admin-qty-per-ctn").value = ctnQty || 1;
         document.getElementById("btn-cancel-edit").style.display = "block";
         window.scrollTo({ top: 0, behavior: "smooth" });
       };
+
       window.deleteAdminOrder = async (id, processedQty) => {
         if (processedQty > 0) return alert(`🚨 拒絕刪除！現場已產生作業進度。`);
         if (confirm(`確定刪除單據 ${id}？`)) {
@@ -1045,6 +1074,7 @@
           loadAdminOrders();
         }
       };
+
       document
         .getElementById("btn-cancel-edit")
         .addEventListener("click", () => {
@@ -1054,6 +1084,7 @@
           document.getElementById("admin-item-code").value = "";
           document.getElementById("admin-lot-code").value = "";
           document.getElementById("admin-qty").value = "";
+          document.getElementById("admin-qty-per-ctn").value = "";
           document.getElementById("btn-cancel-edit").style.display = "none";
           generateOrderNo();
         });
@@ -1072,6 +1103,9 @@
             .getElementById("admin-lot-code")
             .value.trim();
           const qty = parseInt(document.getElementById("admin-qty").value);
+          const qtyPerCtn =
+            parseInt(document.getElementById("admin-qty-per-ctn").value) || 1;
+
           if (
             !orderNo ||
             !itemCode ||
@@ -1080,6 +1114,7 @@
             orderNo === "生成失敗，請手動輸入"
           )
             return alert("請完整填寫或等待序號生成！");
+
           try {
             const orderRef = doc(db, "Orders", orderNo);
             const orderSnap = await getDoc(orderRef);
@@ -1112,13 +1147,22 @@
               });
               alert(`✅ 單號 ${orderNo} 建立成功！`);
             }
+
+            // 將單箱標準數量寫入 Item 主檔中
+            await setDoc(
+              doc(db, "Items", itemCode),
+              { qty_per_ctn: qtyPerCtn },
+              { merge: true },
+            );
+
             document.getElementById("btn-cancel-edit").click();
             loadAdminOrders();
-          } catch (e) {}
+          } catch (e) {
+            console.error(e);
+          }
         });
 
-      // 匯出 Excel (新增批號欄位)
-      // 匯出 Excel (新增批號欄位)
+      // 匯出 Excel
       document
         .getElementById("btn-export-logs")
         .addEventListener("click", async () => {
@@ -1140,13 +1184,14 @@
                 關聯單號: data.order_no || "無",
                 商品條碼: data.scanned_item || "無",
                 批號: data.lot_number || "無",
+                處理數量EA: data.qty || 1,
+                是否為尾箱: data.is_partial ? "是" : "否",
                 來源儲位: data.from_bin || "無",
                 目標儲位: data.to_bin || data.actual_bin || "無",
                 狀態: data.new_status || "成功",
               });
             });
 
-            // 修正：拆分回正確的 Excel 產生步驟
             const ws = XLSX.utils.json_to_sheet(exportData);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "作業紀錄總表");
@@ -1171,6 +1216,7 @@
                   : data.picked_qty || 0;
               const expected = data.expected_qty || 0;
               let currentBin = "未分配";
+              let ctnQty = 1;
 
               // 終極防呆：確保 item_code 存在，且轉為字串後再 trim
               const safeItemCode = data.item_code
@@ -1180,8 +1226,10 @@
               if (safeItemCode !== "") {
                 try {
                   const itemSnap = await getDoc(doc(db, "Items", safeItemCode));
-                  if (itemSnap.exists())
+                  if (itemSnap.exists()) {
                     currentBin = itemSnap.data().default_bin || "未分配";
+                    ctnQty = itemSnap.data().qty_per_ctn || 1;
+                  }
                 } catch (err) {
                   console.warn("查詢儲位失敗:", safeItemCode);
                 }
@@ -1193,8 +1241,9 @@
                 商品條碼: safeItemCode || "無資料",
                 批號: data.lot_number || "無限制",
                 目前儲位: currentBin,
-                預計數量: expected,
-                已處理: processed,
+                EA單箱量: ctnQty,
+                預計總數量EA: expected,
+                已處理總數EA: processed,
                 進度: `${Math.round((processed / expected) * 100)}%`,
                 狀態:
                   processed >= expected
@@ -1205,7 +1254,6 @@
               });
             }
 
-            // 修正：拆分回正確的 Excel 產生步驟
             const ws = XLSX.utils.json_to_sheet(exportData);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "單據總表");
@@ -1216,7 +1264,7 @@
           }
         });
 
-      // 介面切換 (新增清除批號卡片)
+      // 介面切換
       function switchMode(mode) {
         sysMode = mode;
         document
@@ -1267,7 +1315,7 @@
             input.placeholder = "請掃描 PO 條碼...";
             document.getElementById("title-order").innerText = "採購單號";
             document.getElementById("title-item").innerText = "應收料號";
-            document.getElementById("title-qty").innerText = "收貨進度";
+            document.getElementById("title-qty").innerText = "收貨進度 (EA)";
           } else if (mode === "OUTBOUND") {
             document.getElementById("menu-outbound").classList.add("active");
             document
@@ -1280,7 +1328,7 @@
             input.placeholder = "請掃描 SO 條碼...";
             document.getElementById("title-order").innerText = "銷貨單號";
             document.getElementById("title-item").innerText = "應揀料號";
-            document.getElementById("title-qty").innerText = "揀貨進度";
+            document.getElementById("title-qty").innerText = "揀貨進度 (EA)";
           } else if (mode === "INVENTORY") {
             document.getElementById("menu-inventory").classList.add("active");
             document
@@ -1331,7 +1379,14 @@
         .getElementById("menu-quality")
         .addEventListener("click", () => switchMode("QUALITY"));
 
-      // 現場作業核心邏輯 (加入 批號 Lot 攔截機制 與 新商品防呆)
+      function updateQtyDisplay() {
+        const totalCtns = Math.ceil(expectedQty / currentQtyPerCtn);
+        const processedCtns = Math.floor(processedQty / currentQtyPerCtn);
+        document.getElementById("val-qty").innerText =
+          `${processedQty} / ${expectedQty} EA\n(約 ${processedCtns} / ${totalCtns} 箱)`;
+      }
+
+      // 現場作業核心邏輯 (包裝階層與尾箱判定)
       input.addEventListener("keypress", async function (e) {
         if (e.key === "Enter") {
           e.preventDefault();
@@ -1343,7 +1398,7 @@
             new Date().getMinutes().toString().padStart(2, "0");
 
           // ----------------------------------------------------
-          // OUTBOUND (揀貨流程：掃單 -> 掃料號 -> 掃批號 -> 完成)
+          // OUTBOUND (揀貨流程)
           // ----------------------------------------------------
           if (sysMode === "OUTBOUND") {
             if (currentScanState === "ORDER") {
@@ -1356,18 +1411,21 @@
                 expectedItem = data.item_code;
                 expectedQty = data.expected_qty;
                 processedQty = data.picked_qty || 0;
-                expectedLot = data.lot_number || ""; // 若系統有指定批號則紀錄
+                expectedLot = data.lot_number || "";
                 if (processedQty >= expectedQty)
                   return alert(`✅ 已揀貨完成！`);
 
                 const itemSnap = await getDoc(doc(db, "Items", expectedItem));
+                currentQtyPerCtn = itemSnap.exists()
+                  ? itemSnap.data().qty_per_ctn || 1
+                  : 1;
+
                 document.getElementById("val-order").innerText = activeOrder;
                 document.getElementById("val-item").innerText = expectedItem;
                 document.getElementById("val-lot-heat").innerText = expectedLot
                   ? `應揀: ${expectedLot}`
                   : "無限制批號";
-                document.getElementById("val-qty").innerText =
-                  `${processedQty} / ${expectedQty}`;
+                updateQtyDisplay();
                 document.getElementById("val-bin").innerText =
                   `前往儲位: ${itemSnap.exists() ? itemSnap.data().default_bin || "無儲位" : "無儲位"}`;
                 document.getElementById("val-bin").style.color = "#e74c3c";
@@ -1390,21 +1448,18 @@
                   input.value = "";
                   return alert("🚨 出貨攔截！商品為「凍結」狀態！");
                 }
-                // 進入批號核對
                 currentScanState = "LOT";
                 input.classList.remove("state-item");
                 input.classList.add("state-lot");
                 scanLabel.innerText = "第三步：請掃描包裝上的「批號 / 爐號」";
                 input.placeholder = `請掃描 Lot / Heat 條碼...`;
               } else {
-                // 修正：補上防呆警告，若商品從未進貨過則阻擋出貨
                 input.value = "";
                 return alert(
                   "🚨 系統查無此商品主檔！\n原因：此料號從未進行過 Inbound 進貨入庫，現場無庫存可出貨。",
                 );
               }
             } else if (currentScanState === "LOT") {
-              // 批號攔截：如果單據有強制要求指定批號，且掃描不符，則阻擋
               if (expectedLot && barcode !== expectedLot) {
                 input.value = "";
                 return alert(
@@ -1413,7 +1468,28 @@
               }
               scannedLot = barcode;
 
-              processedQty += 1;
+              // 數量與尾箱確認
+              let promptText = `請確認此箱的實際揀貨數量 (EA)\n\n標準完整箱為 ${currentQtyPerCtn} EA。\n若為尾箱 (Partial CTN)，請直接修改下方數字：`;
+              let actualQty = prompt(promptText, currentQtyPerCtn);
+              if (actualQty === null) {
+                input.value = "";
+                return;
+              } // 使用者按取消
+              actualQty = parseInt(actualQty);
+              if (isNaN(actualQty) || actualQty <= 0) {
+                input.value = "";
+                return alert("🚨 數量無效，請重新掃描！");
+              }
+              if (processedQty + actualQty > expectedQty) {
+                input.value = "";
+                return alert(
+                  `🚨 數量超揀！這將會超出總預計數量 ${expectedQty} EA`,
+                );
+              }
+
+              let isPartial = actualQty < currentQtyPerCtn;
+              processedQty += actualQty;
+
               await updateDoc(doc(db, "Orders", activeOrder), {
                 picked_qty: processedQty,
               });
@@ -1422,11 +1498,16 @@
                 order_no: activeOrder,
                 scanned_item: expectedItem,
                 lot_number: scannedLot,
+                qty: actualQty,
+                is_partial: isPartial,
                 operator: currentUser.name,
                 timestamp: serverTimestamp(),
               });
 
-              const detail = `單號:${activeOrder} 料號:${expectedItem} <span style="color:#8e44ad;">批號:${scannedLot}</span>`;
+              const partialHtml = isPartial
+                ? ' <span style="color:#e74c3c;">(尾箱)</span>'
+                : "";
+              const detail = `單號:${activeOrder} 料號:${expectedItem} <span style="color:#8e44ad;">批號:${scannedLot}</span> 數量:${actualQty}EA${partialHtml}`;
               const tr = document.createElement("tr");
               tr.innerHTML = `<td>${timeStr}</td><td><strong style="color:#2980b9;">Pick</strong></td><td>${detail}</td><td><span class="status-badge bg-blue">揀貨成功 (${processedQty}/${expectedQty})</span></td>`;
               document
@@ -1440,8 +1521,7 @@
                 alert(`🎉 銷貨單揀貨完畢。`);
                 switchMode("OUTBOUND");
               } else {
-                document.getElementById("val-qty").innerText =
-                  `${processedQty} / ${expectedQty}`;
+                updateQtyDisplay();
                 currentScanState = "ITEM";
                 input.classList.remove("state-lot");
                 input.classList.add("state-item");
@@ -1450,7 +1530,7 @@
             }
           }
           // ----------------------------------------------------
-          // INBOUND (進貨流程：掃單 -> 掃料號 -> 掃批號 -> 掃儲位)
+          // INBOUND (進貨流程)
           // ----------------------------------------------------
           else if (sysMode === "INBOUND") {
             if (currentScanState === "ORDER") {
@@ -1467,13 +1547,17 @@
                 if (processedQty >= expectedQty)
                   return alert(`✅ 已收貨完成！`);
 
+                const itemSnap = await getDoc(doc(db, "Items", expectedItem));
+                currentQtyPerCtn = itemSnap.exists()
+                  ? itemSnap.data().qty_per_ctn || 1
+                  : 1;
+
                 document.getElementById("val-order").innerText = activeOrder;
                 document.getElementById("val-item").innerText = expectedItem;
                 document.getElementById("val-lot-heat").innerText = expectedLot
                   ? `預計: ${expectedLot}`
                   : "待刷入";
-                document.getElementById("val-qty").innerText =
-                  `${processedQty} / ${expectedQty}`;
+                updateQtyDisplay();
 
                 currentScanState = "ITEM";
                 input.classList.add("state-item");
@@ -1487,7 +1571,6 @@
                 return alert(`🚨 收貨錯誤！單據要求 ${expectedItem}`);
               }
 
-              // 修正：狀態推進不再包在 itemSnap.exists() 裡面，讓新舊商品都能往下刷批號
               const itemSnap = await getDoc(doc(db, "Items", barcode));
               document.getElementById("val-bin").innerText = itemSnap.exists()
                 ? `建議: ${itemSnap.data().default_bin || "--"}`
@@ -1519,29 +1602,55 @@
                 input.value = "";
                 return alert("🚫 請掃描正確的儲位標籤。");
               }
+
+              // 數量與尾箱確認
+              let promptText = `請確認此箱的實際收貨數量 (EA)\n\n標準完整箱為 ${currentQtyPerCtn} EA。\n若為尾箱 (Partial CTN)，請直接修改下方數字：`;
+              let actualQty = prompt(promptText, currentQtyPerCtn);
+              if (actualQty === null) {
+                input.value = "";
+                return;
+              } // 使用者按取消
+              actualQty = parseInt(actualQty);
+              if (isNaN(actualQty) || actualQty <= 0) {
+                input.value = "";
+                return alert("🚨 數量無效，請重新掃描！");
+              }
+              if (processedQty + actualQty > expectedQty) {
+                input.value = "";
+                return alert(
+                  `🚨 數量超收！這將會超出總預計數量 ${expectedQty} EA`,
+                );
+              }
+
+              let isPartial = actualQty < currentQtyPerCtn;
+
               await addDoc(collection(db, "ScanLogs"), {
                 action: "Put_Away",
                 order_no: activeOrder,
                 scanned_item: expectedItem,
                 lot_number: scannedLot,
                 actual_bin: barcode,
+                qty: actualQty,
+                is_partial: isPartial,
                 operator: currentUser.name,
                 timestamp: serverTimestamp(),
               });
 
-              // 修正：改用 setDoc + merge，確保全新商品也能成功建立主檔資料
               await setDoc(
                 doc(db, "Items", expectedItem),
                 { default_bin: barcode },
                 { merge: true },
               );
 
-              processedQty += 1;
+              processedQty += actualQty;
               await updateDoc(doc(db, "Orders", activeOrder), {
                 received_qty: processedQty,
               });
 
-              const detail = `單號:${activeOrder} <br><small>料號:${expectedItem} <span style="color:#8e44ad;">批號:${scannedLot}</span> 上架至:${barcode}</small>`;
+              const partialHtml = isPartial
+                ? ' <span style="color:#e74c3c;">(尾箱)</span>'
+                : "";
+              const detail = `單號:${activeOrder} <br><small>料號:${expectedItem} <span style="color:#8e44ad;">批號:${scannedLot}</span> 上架至:${barcode} 數量:${actualQty}EA${partialHtml}</small>`;
               const tr = document.createElement("tr");
               tr.innerHTML = `<td>${timeStr}</td><td><strong>Put Away</strong></td><td>${detail}</td><td><span class="status-badge bg-green">收貨成功 (${processedQty}/${expectedQty})</span></td>`;
               document
@@ -1555,11 +1664,10 @@
                 alert(`🎉 採購單已收貨完畢。`);
                 switchMode("INBOUND");
               } else {
+                updateQtyDisplay();
                 currentScanState = "ITEM";
                 input.classList.remove("state-bin");
                 input.classList.add("state-item");
-                document.getElementById("val-qty").innerText =
-                  `${processedQty} / ${expectedQty}`;
                 document.getElementById("val-bin").innerText = "--";
                 document.getElementById("val-lot-heat").innerText = expectedLot
                   ? `預計: ${expectedLot}`
